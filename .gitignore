@@ -2,3 +2,4 @@
 models/__pycache__/DWT.cpython-36.pyc
 tmp.h5
 weights/WCNN.h5
+.idea

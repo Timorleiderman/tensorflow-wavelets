@@ -1,25 +1,16 @@
-# conda create --name dwtcnn python=3.6
-# numpy==1.16.4
-# keras == 2.2.2
-# 'tensorflow=1.14.0=mkl*'
-# scipy
-
 import os
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
-import scipy.io
-import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.utils import to_categorical, Sequence
-from keras.applications.vgg16 import preprocess_input
-from keras.preprocessing.image import load_img, img_to_array
-from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, Dense, Flatten, BatchNormalization, Activation, Dropout
-from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.optimizers import Adam, SGD, RMSprop
-from keras.datasets import cifar100
-from tensorflow.keras import backend
-from models.DWT import DWT_Pooling
 
+from keras.models import Model
+from models.DWT import DWT_Pooling
+from keras.datasets import cifar100
+from keras.optimizers import Adam, SGD, RMSprop
+from keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.keras.utils import to_categorical, Sequence
+from keras.layers import Input, Conv2D, MaxPooling2D, Dense, Flatten, BatchNormalization, Activation, Dropout
+
+
+#  os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 if not os.path.exists('weights'):
     os.makedirs('weights')
 
@@ -69,7 +60,7 @@ imageShape = (32, 32, 3)
 
 (x_train, y_train), (x_test, y_test) = cifar100.load_data()
 
-cut_to = 500
+cut_to = -1
 x_train = x_train[:cut_to]
 y_train = y_train[:cut_to]
 x_test = x_test[:cut_to]
