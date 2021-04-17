@@ -1,7 +1,8 @@
 
-models/__pycache__/DWT.cpython-36.pyc
+models/__pycache__/*
 tmp.h5
 weights/WCNN.h5
 .idea
 logs
 trainHistoryDict.txt
+trainHistoryDictcifar10CNN.txt

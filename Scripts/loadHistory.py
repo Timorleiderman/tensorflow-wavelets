@@ -1,7 +1,7 @@
 import pickle
 import matplotlib.pyplot as plt
 
-history_file_path = r"..\trainHistoryDict.txt"
+history_file_path = r"..\trainHistoryDictcifar10CNN.txt"
 
 with open(history_file_path, 'rb') as pickle_file:
     history = pickle.load(pickle_file)

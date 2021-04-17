@@ -54,9 +54,10 @@ def iwt(x, data_format='channels_last'):
         x3 = (x_LL + x_LH - x_HL - x_HH)/4
         x4 = (x_LL + x_LH + x_HL + x_HH)/4
 
-        y1 = K.stack([x1,x3], axis=2)
-        y2 = K.stack([x2,x4], axis=2)
+        y1 = K.stack([x1, x3], axis=2)
+        y2 = K.stack([x2, x4], axis=2)
         shape = K.shape(x)
+
         return K.reshape(K.concatenate([y1,y2], axis=-1), K.stack([shape[0], shape[1]*2, shape[2]*2, shape[3]//4]))
 
     elif data_format == 'channels_first':
