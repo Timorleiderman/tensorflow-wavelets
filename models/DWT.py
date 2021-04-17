@@ -13,16 +13,16 @@ def dwt(x, data_format='channels_last'):
     """
 
     if data_format == 'channels_last':
-        x1 = x[:, 0::2, 0::2, :] #x(2i−1, 2j−1)
-        x2 = x[:, 1::2, 0::2, :] #x(2i, 2j-1)
-        x3 = x[:, 0::2, 1::2, :] #x(2i−1, 2j)
-        x4 = x[:, 1::2, 1::2, :] #x(2i, 2j)
+        x1 = x[:, 0::2, 0::2, :]  # x(2i−1, 2j−1)
+        x2 = x[:, 1::2, 0::2, :]  # x(2i, 2j-1)
+        x3 = x[:, 0::2, 1::2, :]  # x(2i−1, 2j)
+        x4 = x[:, 1::2, 1::2, :]  # x(2i, 2j)
 
     elif data_format == 'channels_first':
-        x1 = x[:, :, 0::2, 0::2] #x(2i−1, 2j−1)
-        x2 = x[:, :, 1::2, 0::2] #x(2i, 2j-1)
-        x3 = x[:, :, 0::2, 1::2] #x(2i−1, 2j)
-        x4 = x[:, :, 1::2, 1::2] #x(2i, 2j)
+        x1 = x[:, :, 0::2, 0::2]  # x(2i−1, 2j−1)
+        x2 = x[:, :, 1::2, 0::2]  # x(2i, 2j-1)
+        x3 = x[:, :, 0::2, 1::2]  # x(2i−1, 2j)
+        x4 = x[:, :, 1::2, 1::2]  # x(2i, 2j)
 
     x_LL = x1 + x2 + x3 + x4
     x_LH = -x1 - x3 + x2 + x4
@@ -73,11 +73,10 @@ def iwt(x, data_format='channels_last'):
         x3 = (x_LL + x_LH - x_HL - x_HH)/4
         x4 = (x_LL + x_LH + x_HL + x_HH)/4
 
-        y1 = K.stack([x1,x3], axis=3)
-        y2 = K.stack([x2,x4], axis=3)
+        y1 = K.stack([x1, x3], axis=3)
+        y2 = K.stack([x2, x4], axis=3)
         shape = K.shape(x)
-        return K.reshape(K.concatenate([y1,y2], axis=1), K.stack([shape[0], shape[1]//4, shape[2]*2, shape[3]*2]))
-
+        return K.reshape(K.concatenate([y1, y2], axis=1), K.stack([shape[0], shape[1]//4, shape[2]*2, shape[3]*2]))
 
 
 class DWT_Pooling(Layer):
@@ -157,7 +156,7 @@ class IWT_UpSampling(Layer):
 
     def compute_output_shape(self, input_shape):
         if self.data_format == 'channels_first':
-            return (input_shape[0], input_shape[1]//4, input_shape[2]*2, input_shape[3]*2)
+            return ( input_shape[0], input_shape[1]//4, input_shape[2]*2, input_shape[3]*2 )
         elif self.data_format == 'channels_last':
-            return (input_shape[0], input_shape[1]*2, input_shape[2]*2, input_shape[3]//4)
+            return ( input_shape[0], input_shape[1]*2, input_shape[2]*2, input_shape[3]//4 )
 
