@@ -105,7 +105,7 @@ for train, test in kfold.split(inputs, targets):
     # Increase fold number
     fold_no = fold_no + 1
 
-    model.load_weights(h5_tmp)
+    model.load_weights("tmp.h5")
     weights_path = os.path.join(weights_filepath, str(fold_no) + "_WCNNN.h5")
     model.save(weights_path)
 
