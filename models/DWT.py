@@ -30,9 +30,9 @@ def dwt(x, data_format='channels_last'):
     x_HH = x1 - x3 - x2 + x4
 
     if data_format == 'channels_last':
-        return K.concatenate([x_LL,x_LH,x_HL,x_HH],axis=-1)
+        return K.concatenate([x_LL, x_LH, x_HL, x_HH], axis=-1)
     elif data_format == 'channels_first':
-        return K.concatenate([x_LL,x_LH,x_HL,x_HH],axis=1)
+        return K.concatenate([x_LL, x_LH, x_HL, x_HH], axis=1)
 
 
 def iwt(x, data_format='channels_last'):
@@ -58,7 +58,7 @@ def iwt(x, data_format='channels_last'):
         y2 = K.stack([x2, x4], axis=2)
         shape = K.shape(x)
 
-        return K.reshape(K.concatenate([y1,y2], axis=-1), K.stack([shape[0], shape[1]*2, shape[2]*2, shape[3]//4]))
+        return K.reshape(K.concatenate([y1, y2], axis=-1), K.stack([shape[0], shape[1]*2, shape[2]*2, shape[3]//4]))
 
     elif data_format == 'channels_first':
 
