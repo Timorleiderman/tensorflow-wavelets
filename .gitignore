@@ -1,9 +1,7 @@
 
 models/__pycache__/*
-tmp.h5
-weights/WCNN.h5
+*.h5
 .idea
 logs
-trainHistoryDict.txt
-trainHistoryDictcifar10CNN.txt
-.ipynb_checkpoints/cifar10-checkpoint.ipynb
+*.txt
+.ipynb_checkpoints
