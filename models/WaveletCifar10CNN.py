@@ -16,7 +16,10 @@ def WaveletCNN(input_size=(32, 32, 3), nb_classes=10):
 
     output = DWT_Pooling()(output)  # dwt
 
+    output = Dropout(0.5)(output)  # added dropout to improve overfitting
+
     output = Conv2D(32, (3, 3), padding="same")(output)
+
     output = Dropout(0.25)(output)
 
     output = Conv2D(64, (3, 3), padding="same")(output)
@@ -28,6 +31,8 @@ def WaveletCNN(input_size=(32, 32, 3), nb_classes=10):
     output = Activation("relu")(output)
 
     output = DWT_Pooling()(output)  # dwt
+
+    output = Dropout(0.5)(output)  # added dropout to improve overfitting
 
     output = Conv2D(64, (3, 3), padding="same")(output)
 
