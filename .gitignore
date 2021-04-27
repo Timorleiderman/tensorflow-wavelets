@@ -6,3 +6,4 @@ weights/WCNN.h5
 logs
 trainHistoryDict.txt
 trainHistoryDictcifar10CNN.txt
+.ipynb_checkpoints/cifar10-checkpoint.ipynb
