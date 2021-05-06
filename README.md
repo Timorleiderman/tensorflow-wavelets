@@ -9,6 +9,5 @@ Multi Wavelets Convolutional Neural Network Study
 5. conda install tensorflow==1.15.0
 6. conda install keras==2.3.1
 
-
 # after training use
 tensorboard --logdir logs
