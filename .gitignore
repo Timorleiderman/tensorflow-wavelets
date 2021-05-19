@@ -4,4 +4,5 @@ models/__pycache__/*
 .idea
 logs
 *.txt
+!requirements.txt
 .ipynb_checkpoints

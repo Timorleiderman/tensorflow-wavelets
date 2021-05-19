@@ -1,0 +1,7 @@
+scipy==1.5.2
+matplotlib==3.3.4
+tensorflow==1.15.0
+keras==2.3.1
+psnr-hvsm==0.1.0
+opencv-python
+scikit-image
