@@ -1,6 +1,36 @@
 import keras.backend as K
-
+import numpy
+import pywt
 from keras.layers import Layer
+import numpy as np
+
+def db4_dwt(x):
+    """
+    channels_last
+    :param x: [samples, widht, height, channels]
+    :return:
+    """
+    arr = numpy.array()
+    for img in x:
+        coeffs2 = pywt.dwt2(img, 'db4')
+        LL, (LH, HL, HH) = coeffs2
+        np.append(arr,[LL, LH, HL, HH])
+
+    return K.concatenate(arr, axis=-1)
+
+def db4_iwt(x):
+    """
+    channels_last
+    :param x: [samples, widht, height, channels]
+    :return:
+    """
+    arr = numpy.array()
+    for img in x:
+        recon = pywt.idwt2(img, 'db4')
+        np.append(arr, recon)
+
+    return K.concatenate(arr, axis=-1)
+
 
 
 def dwt(x, data_format='channels_last'):
@@ -13,6 +43,7 @@ def dwt(x, data_format='channels_last'):
     """
 
     if data_format == 'channels_last':
+        # [all samplesL, width, height, neurons]
         x1 = x[:, 0::2, 0::2, :]  # x(2i−1, 2j−1)
         x2 = x[:, 1::2, 0::2, :]  # x(2i, 2j-1)
         x3 = x[:, 0::2, 1::2, :]  # x(2i−1, 2j)
@@ -160,4 +191,48 @@ class IWT_UpSampling(Layer):
             return ( input_shape[0], input_shape[1]//4, input_shape[2]*2, input_shape[3]*2 )
         elif self.data_format == 'channels_last':
             return ( input_shape[0], input_shape[1]*2, input_shape[2]*2, input_shape[3]//4 )
+
+
+
+
+class DWT_Pooling_Db4(Layer):
+    """
+    Custom Layer performing DWT pooling operation with db4 :
+
+    # Output shape
+        If data_format='channels_last':
+            4D tensor of shape: (batch_size, rows/2, cols/2, channels*4)
+        If data_format='channels_first':
+            4D tensor of shape: (batch_size, channels*4, rows/2, cols/2)
+    """
+
+    def __init__(self, **kwargs):
+        super(DWT_Pooling_Db4, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        super(DWT_Pooling_Db4, self).build(input_shape)
+
+    def call(self, x):
+        return dwt(x)
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], input_shape[1]//2, input_shape[2]//2, input_shape[3]*4)
+
+
+class IWT_UpSampling_Db4(Layer):
+    """
+    Custom Layer performing IWT upsampling operation described in :
+    """
+
+    def __init__(self , **kwargs):
+        super(IWT_UpSampling_Db4, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        super(IWT_UpSampling_Db4, self).build(input_shape)
+
+    def call(self, x):
+        return db4_iwt(x)
+
+    def compute_output_shape(self, input_shape):
+        return ( input_shape[0], input_shape[1]*2, input_shape[2]*2, input_shape[3]//4 )
 
