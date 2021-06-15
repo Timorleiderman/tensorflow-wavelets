@@ -6,3 +6,5 @@ logs
 !requirements.txt
 .ipynb_checkpoints
 *__pycache__*
+*.asv
+*.png
