@@ -1,7 +1,7 @@
 
 clear
 % read image convert to grayscale
-X = imread('../../input/Lenna_orig.png');
+X = imread('../../input/Lenna_Orig.png');
 X = double(rgb2gray(X));
 
 % example for haar
@@ -9,7 +9,8 @@ X = double(rgb2gray(X));
 % matlab implementation
 wavelet_name = 'haar';
 [LoD,HiD] = wfilters(wavelet_name,'d')
-[cA,cH,cV,cD] = dwt2(X,LoD,-HiD,'mode','symh');
+[cA,cH,cV,cD] = dwt2(X,LoD,HiD,'mode','symh');
+X_rec = idwt2(cA,cH,cV,cD,wavelet_name);
 
 % Multi-Level Wavelet Convolutional
 % Neural Networks implementation
@@ -38,28 +39,48 @@ djh = (a_j(1:2:end,:) - a_j(2:2:end,:)) * -(1/sqrt(2)); % LH
 djv = (d_j(1:2:end,:) + d_j(2:2:end,:)) * -(1/sqrt(2)); % HL
 djd = (d_j(1:2:end,:) - d_j(2:2:end,:)) * (1/sqrt(2)); % HH
 
+% 3 level decomposition
+[LL, LH, HL, HH] = dwt2d_haar(X);
+img_rec = idwt2d_haar(LL, LH, HL, HH);
 
+err_img = max(max(X_rec - img_rec));
+
+[LL2,LH2,HL2,HH2] = dwt2d_haar(LL);
+[LL3,LH3,HL3,HH3] = dwt2d_haar(LL2);
 
 % errors for Multi-Level Wavelet Convolutional Neural Networks
-err_LL = max(max(cA - x_LL));
-err_LH = max(max(cH - x_LH));
-err_HL = max(max(cV - x_HL));
-err_HH = max(max(cD - x_HH));
+% err_LL = max(max(cA - x_LL));
+% err_LH = max(max(cH - x_LH));
+% err_HL = max(max(cV - x_HL));
+% err_HH = max(max(cD - x_HH));
 
 % errors for my implementatoin
-err_ajj = max(max(cA - ajj));
-err_djh = max(max(cH - djh));
-err_djv = max(max(cV - djv));
-err_djd = max(max(cD - djd));
+% err_ajj = max(max(cA - ajj));
+% err_djh = max(max(cH - djh));
+% err_djv = max(max(cV - djv));
+% err_djd = max(max(cD - djd));
 
 
-err_multi_my_ll = max(max(x_LL-ajj))
-err_multi_my_lh = max(max(x_LH-djh))
-err_multi_my_hl = max(max(x_HL-djv))
-err_multi_my_hh = max(max(x_HH-djd))
+err_multi_my_ll = max(max(x_LL-ajj));
+err_multi_my_lh = max(max(x_LH-djh));
+err_multi_my_hl = max(max(x_HL-djv));
+err_multi_my_hh = max(max(x_HH-djd));
 
 
+downsample_x = X(1:2:end,1:2:end);
 figure(1)
-imshow(uint8(x_LL))
+% imshow(uint8(X_rec))
+histogram(uint8(downsample_x))
+
 figure(2)
-imshow(uint8(cA))
+imshow(uint8(cD/2))
+
+figure(3)
+imshow(uint8(downsample_x))
+
+
+figure(4)
+imshow(uint8(X))
+
+figure(5)
+histogram(uint8(cD/2))
