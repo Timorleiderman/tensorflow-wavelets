@@ -26,9 +26,11 @@ wavelet_name = 'db2';
 [cA,cH,cV,cD] = dwt2(f,LoD,HiD,'mode','sym');
 
 [cAmy,cHmy,cVmy,cDmy] = mydwt2d(f,LoD,HiD);
+cAmy = uint8(cAmy);
+writeRaw("D:\TEMP\LL.raw", uint8(cAmy), 'uint8')
 % 
-% figure(1)
-% imshow(uint8(cA))
+figure(1)
+imshow(uint8(cAmy))
 % figure(2)
 % imshow(uint8(cAmy))
 % % 
