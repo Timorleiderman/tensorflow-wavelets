@@ -1,7 +1,8 @@
 import keras.backend as K
 import numpy
 import pywt
-from keras.layers import Layer
+# from keras.layers import Layer
+from tensorflow.keras import layers
 import numpy as np
 
 def db4_dwt(x):
@@ -10,13 +11,12 @@ def db4_dwt(x):
     :param x: [samples, widht, height, channels]
     :return:
     """
-    arr = numpy.array()
-    for img in x:
-        coeffs2 = pywt.dwt2(img, 'db4')
-        LL, (LH, HL, HH) = coeffs2
-        np.append(arr,[LL, LH, HL, HH])
+    arr = list()
+    # for img in x:
+    coeffs2 = pywt.dwt2(x[:,:,:,:], 'db4')
+    LL, (LH, HL, HH) = coeffs2
 
-    return K.concatenate(arr, axis=-1)
+    return K.concatenate([LL], axis=-1)
 
 def db4_iwt(x):
     """
@@ -111,7 +111,7 @@ def iwt(x, data_format='channels_last'):
         return K.reshape(K.concatenate([y1, y2], axis=1), K.stack([shape[0], shape[1]//4, shape[2]*2, shape[3]*2]))
 
 
-class DWT_Pooling(Layer):
+class DWT_Pooling(layers.Layer):
     """
     Custom Layer performing DWT pooling operation described in :
 
@@ -152,7 +152,7 @@ class DWT_Pooling(Layer):
             return (input_shape[0], input_shape[1]//2, input_shape[2]//2, input_shape[3]*4)
 
 
-class IWT_UpSampling(Layer):
+class IWT_UpSampling(layers.Layer):
     """
     Custom Layer performing IWT upsampling operation described in :
 
@@ -195,7 +195,7 @@ class IWT_UpSampling(Layer):
 
 
 
-class DWT_Pooling_Db4(Layer):
+class DWT_Pooling_Db4(layers.Layer):
     """
     Custom Layer performing DWT pooling operation with db4 :
 
@@ -213,13 +213,14 @@ class DWT_Pooling_Db4(Layer):
         super(DWT_Pooling_Db4, self).build(input_shape)
 
     def call(self, x):
-        return dwt(x)
+        
+        return db4_dwt(x)
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], input_shape[1]//2, input_shape[2]//2, input_shape[3]*4)
 
 
-class IWT_UpSampling_Db4(Layer):
+class IWT_UpSampling_Db4(layers.Layer):
     """
     Custom Layer performing IWT upsampling operation described in :
     """
