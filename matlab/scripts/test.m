@@ -20,19 +20,20 @@ clear
 f = imread('../../input/LennaGrey.png');
 % f = double(rgb2gray(f));
 wavelet_name = 'db2';
+
 [LoD,HiD] = wfilters(wavelet_name,'d'); % decomposition
 [LoR,HiR] = wfilters(wavelet_name,'r'); % reconstruction
 
 [cA,cH,cV,cD] = dwt2(f,LoD,HiD,'mode','sym');
+reconstructed = idwt2(cA,cH,cV,cD,LoR,HiR);
 
 [cAmy,cHmy,cVmy,cDmy] = mydwt2d(f,LoD,HiD);
-cAmy = uint8(cAmy);
-writeRaw("D:\TEMP\LL.raw", uint8(cAmy), 'uint8')
-% 
+myreconstructed = myidwt2d(cAmy,cHmy,cVmy,cDmy,LoR,HiR);
+
 figure(1)
-imshow(uint8(cAmy))
-% figure(2)
-% imshow(uint8(cAmy))
+imshow(uint8(myreconstructed))
+figure(2)
+imshow(uint8(reconstructed))
 % % 
 % [cA,cD] = dwt(f,wavelet_name,'mode','sym');
 % f11 = idwt(cA,cD,wavelet_name,'mode','sym');

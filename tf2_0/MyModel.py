@@ -190,6 +190,7 @@ with tf.compat.v1.Session() as sess:
     axarr[1].imshow(ans2, interpolation='none', cmap='gray', vmin=0, vmax=255)
     axarr[2].imshow(cv_sobel, interpolation='none', cmap='gray', vmin=0, vmax=255)
     axarr[3].imshow(sig_sobel, interpolation='none', cmap='gray', vmin=0, vmax=255)
+    axarr[3].imshow(x_train[0, :, :, :].astype("uint8"), interpolation='none')
 
 # # show the figure
 plt.show()

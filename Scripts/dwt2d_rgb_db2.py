@@ -10,7 +10,7 @@ w, h, c = img_in.shape
 
 
 # expend dimps to look like x_train
-x = tf.expand_dims(img_in, axis=0)
+x = tf.expand_dims(img_in, axis=-1)
 # x = tf.expand_dims(x, axis=-1)
 
 # symetric border padding colums for convolution

@@ -39,4 +39,5 @@ HL = approx_hp_lp_conv(2:2:h,:);
 
 approx_hp_hp_conv = approx_hp_hp_conv';
 HH = approx_hp_hp_conv(2:2:h,:);
+end
     
