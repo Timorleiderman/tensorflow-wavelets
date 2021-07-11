@@ -67,19 +67,44 @@ db2_h2 = (3-math.sqrt(3))/(4*math.sqrt(2))
 db2_h3 = (1-math.sqrt(3))/(4*math.sqrt(2))
 
 # Reconstruction LPF and HPF
-db2_lpfR = [db2_h3, db2_h1, db2_h2, db2_h0]
+db2_lpfR = [db2_h3, db2_h2, db2_h1, db2_h0]
 db2_hpfR = [-db2_h0, db2_h1, -db2_h2, db2_h3]
-
+print(db2_lpfR)
+print(db2_hpfR)
 # convert to matrix for conv2d
 db2_lpf = tf.constant(db2_lpfR)
 db2_lpf = tf.reshape(db2_lpf, (1, 4, 1, 1))
-db2_lpf = tf.repeat(db2_lpf, 4, axis=-1)
+# db2_lpf = tf.repeat(db2_lpf, 4, axis=-1)
 
 db2_hpf = tf.constant(db2_hpfR)
 db2_hpf = tf.reshape(db2_hpf, (1, 4, 1, 1))
-db2_hpf = tf.repeat(db2_hpf, 4, axis=-1)
+# db2_hpf = tf.repeat(db2_hpf, 4, axis=-1)
 
 # upsampling -> padding zeros between all elements
+LL = tf.expand_dims(x[:,:,:,0], axis=-1)
+LH = tf.expand_dims(x[:,:,:,1], axis=-1)
+HL = tf.expand_dims(x[:,:,:,2], axis=-1)
+HH = tf.expand_dims(x[:,:,:,3], axis=-1)
+
+def upsampler(x):
+    zero_tensor = tf.zeros(shape=x.shape, dtype=tf.float32)
+    stack_rows = tf.stack([x, zero_tensor], axis=3)
+    stack_rows = tf.reshape(stack_rows, shape=[x.shape[0], x.shape[1], x.shape[2]*2, x.shape[3]])
+    stack_rows = tf.transpose(stack_rows, perm=[0, 2, 1, 3])
+    zero_tensor_1 = tf.zeros(shape=stack_rows.shape, dtype=tf.float32)
+
+    stack_rows_cols = tf.stack([stack_rows, zero_tensor_1], axis=3)
+    us_padded = tf.reshape(stack_rows_cols, shape=[x.shape[0], x.shape[1]*2, x.shape[2]*2, x.shape[3]])
+
+    us_padded = tf.transpose(us_padded, perm=[0, 2, 1, 3])
+    return us_padded
+
+
+LL_us_pad = upsampler(LL)
+LH_us_pad = upsampler(LH)
+HL_us_pad = upsampler(HL)
+HH_us_pad = upsampler(HH)
+
 
 zero_tensor = tf.zeros(shape=x.shape, dtype=tf.float32)
 c = tf.stack([x, zero_tensor], axis=4)
@@ -96,29 +121,33 @@ LH_us_pad = tf.expand_dims(a_us_us[:,:,:,1], axis=-1)
 HL_us_pad = tf.expand_dims(a_us_us[:,:,:,2], axis=-1)
 HH_us_pad = tf.expand_dims(a_us_us[:,:,:,3], axis=-1)
 
-LL_conv_lpf = tf.nn.conv2d(LL_us_pad, db2_lpf, padding='VALID', strides=[1, 1, 1, 1],)
-LL_conv_lpf = tf.transpose(LL_conv_lpf, perm=[0, 2, 1,3])
-LL_conv_lpf_lpf = tf.nn.conv2d(LL_conv_lpf, db2_lpf, padding='VALID', strides=[1, 1, 1, 1],)
+padd_type = 'VALID'
+LL_conv_lpf = tf.nn.conv2d(LL_us_pad, db2_lpf, padding=padd_type, strides=[1, 1, 1, 1],)
 
-LH_conv_lpf = tf.nn.conv2d(LH_us_pad, db2_lpf, padding='VALID', strides=[1, 1, 1, 1],)
-LH_conv_lpf = tf.transpose(LH_conv_lpf, perm=[0, 2, 1,3])
-LH_conv_lpf_hpf = tf.nn.conv2d(LH_conv_lpf, db2_hpf, padding='VALID', strides=[1, 1, 1, 1],)
+LL_conv_lpf_tr = tf.transpose(LL_conv_lpf, perm=[0, 2, 1, 3])
+LL_conv_lpf_lpf = tf.nn.conv2d(LL_conv_lpf_tr, db2_lpf, padding=padd_type, strides=[1, 1, 1, 1],)
+LL_conv_lpf_lpf_tr = tf.transpose(LL_conv_lpf_lpf, perm=[0, 2, 1, 3])
 
-HL_conv_hpf = tf.nn.conv2d(HL_us_pad, db2_hpf, padding='VALID', strides=[1, 1, 1, 1],)
-HL_conv_hpf = tf.transpose(HL_conv_hpf, perm=[0, 2, 1,3])
-HL_conv_hpf_lpf = tf.nn.conv2d(HL_conv_hpf, db2_lpf, padding='VALID', strides=[1, 1, 1, 1],)
+LH_conv_lpf = tf.nn.conv2d(LH_us_pad, db2_lpf, padding=padd_type, strides=[1, 1, 1, 1],)
+LH_conv_lpf_tr = tf.transpose(LH_conv_lpf, perm=[0, 2, 1, 3])
+LH_conv_lpf_hpf = tf.nn.conv2d(LH_conv_lpf_tr, db2_hpf, padding=padd_type, strides=[1, 1, 1, 1],)
+LH_conv_lpf_hpf_tr = tf.transpose(LH_conv_lpf_hpf, perm=[0, 2, 1, 3])
 
-HH_conv_hpf = tf.nn.conv2d(HH_us_pad, db2_hpf, padding='VALID', strides=[1, 1, 1, 1],)
-HH_conv_hpf = tf.transpose(HH_conv_hpf, perm=[0, 2, 1,3])
-HH_conv_hpf_hpf = tf.nn.conv2d(HH_conv_hpf, db2_hpf, padding='VALID', strides=[1, 1, 1, 1],)
+HL_conv_hpf = tf.nn.conv2d(HL_us_pad, db2_hpf, padding=padd_type, strides=[1, 1, 1, 1],)
+HL_conv_hpf_tr = tf.transpose(HL_conv_hpf, perm=[0, 2, 1, 3])
+HL_conv_hpf_lpf = tf.nn.conv2d(HL_conv_hpf_tr, db2_lpf, padding=padd_type, strides=[1, 1, 1, 1],)
+HL_conv_hpf_lpf_tr = tf.transpose(HL_conv_hpf_lpf, perm=[0, 2, 1, 3])
 
-LL_LH = tf.add(LL_conv_lpf_lpf, LH_conv_lpf_hpf)
-HL_HH = tf.add(HL_conv_hpf_lpf, HH_conv_hpf_hpf)
+HH_conv_hpf = tf.nn.conv2d(HH_us_pad, db2_hpf, padding=padd_type, strides=[1, 1, 1, 1],)
+HH_conv_hpf_tr = tf.transpose(HH_conv_hpf, perm=[0, 2, 1, 3])
+HH_conv_hpf_hpf = tf.nn.conv2d(HH_conv_hpf_tr, db2_hpf, padding=padd_type, strides=[1, 1, 1, 1],)
+HH_conv_hpf_hpf_tr = tf.transpose(HH_conv_hpf_hpf, perm=[0, 2, 1, 3])
 
-img = tf.add(LL_LH,HL_HH)
 
+LL_LH = tf.math.add(LL_conv_lpf_lpf_tr, LH_conv_lpf_hpf_tr)
+HL_HH = tf.math.add(HL_conv_hpf_lpf_tr, HH_conv_hpf_hpf_tr)
 
-
+res = tf.math.add(LL_LH,HL_HH)
 
 
 

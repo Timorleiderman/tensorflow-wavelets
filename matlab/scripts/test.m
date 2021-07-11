@@ -30,6 +30,7 @@ reconstructed = idwt2(cA,cH,cV,cD,LoR,HiR);
 [cAmy,cHmy,cVmy,cDmy] = mydwt2d(f,LoD,HiD);
 myreconstructed = myidwt2d(cAmy,cHmy,cVmy,cDmy,LoR,HiR);
 
+err = max(abs(double(f) - myreconstructed));
 figure(1)
 imshow(uint8(myreconstructed))
 figure(2)
