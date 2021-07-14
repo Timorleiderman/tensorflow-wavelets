@@ -1,4 +1,5 @@
 import math
+import pywt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -6,70 +7,91 @@ from tensorflow.keras.datasets import mnist, cifar10
 
 
 class DWT(layers.Layer):
-    def __init__(self):
-        super(DWT, self).__init__()
+    def __init__(self, name='haar', **kwargs):
+        super(DWT, self).__init__(**kwargs)
+        self._name = self.name + "_" + name
+        # get filter coeffs from 3rd party lib
+        wavelet = pywt.Wavelet(name)
+        self.dec_len = wavelet.dec_len
 
-        db2_h0 = (1+math.sqrt(3))/(4*math.sqrt(2))
-        db2_h1 = (3+math.sqrt(3))/(4*math.sqrt(2))
-        db2_h2 = (3-math.sqrt(3))/(4*math.sqrt(2))
-        db2_h3 = (1-math.sqrt(3))/(4*math.sqrt(2))
+        # decomposition filter low pass and hight pass coeffs
+        db2_lpf = wavelet.dec_lo
+        db2_hpf = wavelet.dec_hi
 
-        db2_lpf = [db2_h0, db2_h1, db2_h2, db2_h3]
-        db2_hpf = [db2_h3, -db2_h2, db2_h1, -db2_h0]
-
+        # covert values into tensor and reshape for convolution math
         db2_lpf = tf.constant(db2_lpf)
-        self.db2_lpf = tf.reshape(db2_lpf, (1, 4, 1, 1))
+        self.db2_lpf = tf.reshape(db2_lpf, (1, wavelet.dec_len, 1, 1))
 
         db2_hpf = tf.constant(db2_hpf)
-        self.db2_hpf = tf.reshape(db2_hpf, (1, 4, 1, 1))
+        self.db2_hpf = tf.reshape(db2_hpf, (1, wavelet.dec_len, 1, 1))
+
+        self.conv_type = "VALID"
+        self.border_padd = "SYMMETRIC"
 
     def build(self, input_shape):
-
-        if input_shape[-1] == 3:
-            self.db2_lpf = tf.repeat(self.db2_lpf, 3, axis=-1)
-            self.db2_hpf = tf.repeat(self.db2_hpf, 3, axis=-1)
+        # filter dims should be bigger if input is not gray scale
+        if input_shape[-1] != 1:
+            self.db2_lpf = tf.repeat(self.db2_lpf, input_shape[-1], axis=-1)
+            self.db2_hpf = tf.repeat(self.db2_hpf, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
 
-        inputs_padd = tf.pad(inputs, [[0, 0], [0, 0], [3, 3], [0, 0]], "SYMMETRIC")
+        # border padding symatric add coulums
+        inputs_pad = tf.pad(inputs, [[0, 0], [0, 0], [self.dec_len-1, self.dec_len-1], [0, 0]], self.border_padd)
+
+        # approximation conv only rows
         a = tf.nn.conv2d(
-            inputs_padd, self.db2_lpf, padding='VALID', strides=[1, 1, 1, 1],
+            inputs_pad, self.db2_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
+        # details conv only rows
         d = tf.nn.conv2d(
-            inputs_padd, self.db2_hpf, padding='VALID', strides=[1, 1, 1, 1],
+            inputs_pad, self.db2_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
-        a_ds = a[:, :, 1:inputs.shape[1]:2, :]
-        d_ds = d[:, :, 1:inputs.shape[1]:2, :]
-        a_ds_padd = tf.pad(a_ds, [[0, 0], [3, 3], [0, 0], [0, 0]], "SYMMETRIC")
-        d_ds_padd = tf.pad(d_ds, [[0, 0], [3, 3], [0, 0], [0, 0]], "SYMMETRIC")
+        # ds - downsample
+        a_ds = a[:, :, 1:a.shape[2]:2, :]
+        d_ds = d[:, :, 1:a.shape[2]:2, :]
 
-        a_ds_padd = tf.transpose(a_ds_padd, perm=[0, 2, 1, 3])
-        d_ds_padd = tf.transpose(d_ds_padd, perm=[0, 2, 1, 3])
+        # border padding symatric add rows
+        a_ds_pad = tf.pad(a_ds, [[0, 0], [self.dec_len-1, self.dec_len-1], [0, 0], [0, 0]], self.border_padd)
+        d_ds_pad = tf.pad(d_ds, [[0, 0], [self.dec_len-1, self.dec_len-1], [0, 0], [0, 0]], self.border_padd)
 
+        # convolution is done on the rows so we need to
+        # transpose the matrix in order to convolve the colums
+        a_ds_pad = tf.transpose(a_ds_pad, perm=[0, 2, 1, 3])
+        d_ds_pad = tf.transpose(d_ds_pad, perm=[0, 2, 1, 3])
+
+        # aa approximation approximation
         aa = tf.nn.conv2d(
-            a_ds_padd, self.db2_lpf, padding='VALID', strides=[1, 1, 1, 1],
+            a_ds_pad, self.db2_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
+        # ad approximation details
         ad = tf.nn.conv2d(
-            a_ds_padd, self.db2_hpf, padding='VALID', strides=[1, 1, 1, 1],
+            a_ds_pad, self.db2_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
+        # ad details aproximation
         da = tf.nn.conv2d(
-            d_ds_padd, self.db2_lpf, padding='VALID', strides=[1, 1, 1, 1],
+            d_ds_pad, self.db2_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
+        # dd details details
         dd = tf.nn.conv2d(
-            d_ds_padd, self.db2_hpf, padding='VALID', strides=[1, 1, 1, 1],
+            d_ds_pad, self.db2_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
 
+        # transpose back the matrix
         aa = tf.transpose(aa, perm=[0, 2, 1, 3])
         ad = tf.transpose(ad, perm=[0, 2, 1, 3])
         da = tf.transpose(da, perm=[0, 2, 1, 3])
         dd = tf.transpose(dd, perm=[0, 2, 1, 3])
 
-        LL = aa[:, 1:inputs.shape[2]:2, :, :]
-        LH = ad[:, 1:inputs.shape[2]:2, :, :]
-        HL = da[:, 1:inputs.shape[2]:2, :, :]
-        HH = dd[:, 1:inputs.shape[2]:2, :, :]
+        # down sample
+        ll = aa[:, 1:aa.shape[1]:2, :, :]
+        lh = ad[:, 1:aa.shape[1]:2, :, :]
+        hl = da[:, 1:aa.shape[1]:2, :, :]
+        hh = dd[:, 1:aa.shape[1]:2, :, :]
 
-        x = tf.concat([LL, LH, HL, HH], axis=-1)
+        # concate all outputs ionto tensor
+        x = tf.concat([ll, lh, hl, hh], axis=-1)
+
         return x
 
 
@@ -77,23 +99,20 @@ class IDWT(layers.Layer):
     def __init__(self):
         super(IDWT, self).__init__()
 
-        self.padd_type = "VALID"
+        self.pad_type = "VALID"
         # calculate Decomposition LPF and HPF
         db2_h0 = (1+math.sqrt(3))/(4*math.sqrt(2))
         db2_h1 = (3+math.sqrt(3))/(4*math.sqrt(2))
         db2_h2 = (3-math.sqrt(3))/(4*math.sqrt(2))
         db2_h3 = (1-math.sqrt(3))/(4*math.sqrt(2))
 
-        db2_lpfR = [db2_h3, db2_h2, db2_h1, db2_h0]
-        db2_hpfR = [-db2_h0, db2_h1, -db2_h2, db2_h3]
+        db2_lpf_r = [db2_h3, db2_h2, db2_h1, db2_h0]
+        db2_hpf_r = [-db2_h0, db2_h1, -db2_h2, db2_h3]
 
-        # db2_lpf = [db2_h0, db2_h1, db2_h2, db2_h3]
-        # db2_hpf = [db2_h3, -db2_h2, db2_h1, -db2_h0]
-
-        db2_lpf = tf.constant(db2_lpfR)
+        db2_lpf = tf.constant(db2_lpf_r)
         self.db2_lpf = tf.reshape(db2_lpf, (1, 4, 1, 1))
 
-        db2_hpf = tf.constant(db2_hpfR)
+        db2_hpf = tf.constant(db2_hpf_r)
         self.db2_hpf = tf.reshape(db2_hpf, (1, 4, 1, 1))
 
     def upsampler2d(self, x):
@@ -113,43 +132,41 @@ class IDWT(layers.Layer):
         x = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "SYMMETRIC")
         x = tf.cast(x, tf.float32)
 
-        LL = tf.expand_dims(x[:, :, :, 0], axis=-1)
-        LH = tf.expand_dims(x[:, :, :, 1], axis=-1)
-        HL = tf.expand_dims(x[:, :, :, 2], axis=-1)
-        HH = tf.expand_dims(x[:, :, :, 3], axis=-1)
+        ll = tf.expand_dims(x[:, :, :, 0], axis=-1)
+        lh = tf.expand_dims(x[:, :, :, 1], axis=-1)
+        hl = tf.expand_dims(x[:, :, :, 2], axis=-1)
+        hh = tf.expand_dims(x[:, :, :, 3], axis=-1)
 
-        print(LL.shape)
-        LL_us_pad = self.upsampler2d(LL)
-        LH_us_pad = self.upsampler2d(LH)
-        HL_us_pad = self.upsampler2d(HL)
-        HH_us_pad = self.upsampler2d(HH)
+        ll_us_pad = self.upsampler2d(ll)
+        lh_us_pad = self.upsampler2d(lh)
+        hl_us_pad = self.upsampler2d(hl)
+        hh_us_pad = self.upsampler2d(hh)
 
-        LL_conv_lpf = tf.nn.conv2d(LL_us_pad, self.db2_lpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
-        LL_conv_lpf_tr = tf.transpose(LL_conv_lpf, perm=[0, 2, 1, 3])
-        LL_conv_lpf_lpf = tf.nn.conv2d(LL_conv_lpf_tr, self.db2_lpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
-        LL_conv_lpf_lpf_tr = tf.transpose(LL_conv_lpf_lpf, perm=[0, 2, 1, 3])
+        ll_conv_lpf = tf.nn.conv2d(ll_us_pad, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        ll_conv_lpf_tr = tf.transpose(ll_conv_lpf, perm=[0, 2, 1, 3])
+        ll_conv_lpf_lpf = tf.nn.conv2d(ll_conv_lpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        ll_conv_lpf_lpf_tr = tf.transpose(ll_conv_lpf_lpf, perm=[0, 2, 1, 3])
 
-        LH_conv_lpf = tf.nn.conv2d(LH_us_pad, self.db2_lpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
-        LH_conv_lpf_tr = tf.transpose(LH_conv_lpf, perm=[0, 2, 1, 3])
-        LH_conv_lpf_hpf = tf.nn.conv2d(LH_conv_lpf_tr, self.db2_lpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
-        LH_conv_lpf_hpf_tr = tf.transpose(LH_conv_lpf_hpf, perm=[0, 2, 1, 3])
+        lh_conv_lpf = tf.nn.conv2d(lh_us_pad, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        lh_conv_lpf_tr = tf.transpose(lh_conv_lpf, perm=[0, 2, 1, 3])
+        lh_conv_lpf_hpf = tf.nn.conv2d(lh_conv_lpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        lh_conv_lpf_hpf_tr = tf.transpose(lh_conv_lpf_hpf, perm=[0, 2, 1, 3])
 
-        HL_conv_hpf = tf.nn.conv2d(HL_us_pad, self.db2_hpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
-        HL_conv_hpf_tr = tf.transpose(HL_conv_hpf, perm=[0, 2, 1, 3])
-        HL_conv_hpf_lpf = tf.nn.conv2d(HL_conv_hpf_tr, self.db2_lpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
-        HL_conv_hpf_lpf_tr = tf.transpose(HL_conv_hpf_lpf, perm=[0, 2, 1, 3])
+        hl_conv_hpf = tf.nn.conv2d(hl_us_pad, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        hl_conv_hpf_tr = tf.transpose(hl_conv_hpf, perm=[0, 2, 1, 3])
+        hl_conv_hpf_lpf = tf.nn.conv2d(hl_conv_hpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        hl_conv_hpf_lpf_tr = tf.transpose(hl_conv_hpf_lpf, perm=[0, 2, 1, 3])
 
-        HH_conv_hpf = tf.nn.conv2d(HH_us_pad, self.db2_hpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
+        HH_conv_hpf = tf.nn.conv2d(hh_us_pad, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
         HH_conv_hpf_tr = tf.transpose(HH_conv_hpf, perm=[0, 2, 1, 3])
-        HH_conv_hpf_hpf = tf.nn.conv2d(HH_conv_hpf_tr, self.db2_hpf, padding=self.padd_type, strides=[1, 1, 1, 1],)
+        HH_conv_hpf_hpf = tf.nn.conv2d(HH_conv_hpf_tr, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
         HH_conv_hpf_hpf_tr = tf.transpose(HH_conv_hpf_hpf, perm=[0, 2, 1, 3])
 
-        LL_LH = tf.math.add(LL_conv_lpf_lpf_tr, LH_conv_lpf_hpf_tr)
-        HL_HH = tf.math.add(HL_conv_hpf_lpf_tr, HH_conv_hpf_hpf_tr)
+        LL_LH = tf.math.add(ll_conv_lpf_lpf_tr, lh_conv_lpf_hpf_tr)
+        HL_HH = tf.math.add(hl_conv_hpf_lpf_tr, HH_conv_hpf_hpf_tr)
 
         reconstructed = tf.math.add(LL_LH, HL_HH)
         return reconstructed[:, 5:-4, 5:-4, :]
-
 
 
 if __name__ == "__main__":
