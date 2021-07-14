@@ -18,7 +18,7 @@ class DWT(layers.Layer):
         db2_lpf = wavelet.dec_lo
         db2_hpf = wavelet.dec_hi
 
-        # covert values into tensor and reshape for convolution math
+        # covert filters into tensors and reshape for convolution math
         db2_lpf = tf.constant(db2_lpf)
         self.db2_lpf = tf.reshape(db2_lpf, (1, wavelet.dec_len, 1, 1))
 
@@ -96,42 +96,61 @@ class DWT(layers.Layer):
 
 
 class IDWT(layers.Layer):
-    def __init__(self):
-        super(IDWT, self).__init__()
-
+    def __init__(self, name='haar', **kwargs):
+        super(IDWT, self).__init__(**kwargs)
+        self._name = self.name + "_" + name
         self.pad_type = "VALID"
-        # calculate Decomposition LPF and HPF
-        db2_h0 = (1+math.sqrt(3))/(4*math.sqrt(2))
-        db2_h1 = (3+math.sqrt(3))/(4*math.sqrt(2))
-        db2_h2 = (3-math.sqrt(3))/(4*math.sqrt(2))
-        db2_h3 = (1-math.sqrt(3))/(4*math.sqrt(2))
 
-        db2_lpf_r = [db2_h3, db2_h2, db2_h1, db2_h0]
-        db2_hpf_r = [-db2_h0, db2_h1, -db2_h2, db2_h3]
+        # get filter coeffs from 3rd party lib
+        wavelet = pywt.Wavelet(name)
+        self.rec_len = wavelet.rec_len
 
-        db2_lpf = tf.constant(db2_lpf_r)
-        self.db2_lpf = tf.reshape(db2_lpf, (1, 4, 1, 1))
+        # decomposition filter low pass and hight pass coeffs
+        db2_lpf = wavelet.rec_lo
+        db2_hpf = wavelet.rec_hi
 
-        db2_hpf = tf.constant(db2_hpf_r)
-        self.db2_hpf = tf.reshape(db2_hpf, (1, 4, 1, 1))
+        # covert filters into tensors and reshape for convolution math
+        db2_lpf = tf.constant(db2_lpf)
+        self.db2_lpf = tf.reshape(db2_lpf, (1, wavelet.rec_len, 1, 1))
+
+        db2_hpf = tf.constant(db2_hpf)
+        self.db2_hpf = tf.reshape(db2_hpf, (1, wavelet.rec_len, 1, 1))
 
     def upsampler2d(self, x):
-        # zero_tensor = tf.zeros(shape=x.shape, dtype=tf.float32)
+        """
+        up sampling with zero insertion between rows and columns
+        :param x: 4 dim tensor (?, w, h, ch)
+        :return:  up sampled tensor with shape (?, 2*w, 2*h, ch)
+        """
+        # create zero like tensor
         zero_tensor = tf.zeros_like(x, dtype=tf.float32)
+        # stack both tensors
         stack_rows = tf.stack([x, zero_tensor], axis=3)
+        # reshape for zero insertion between the rows
         stack_rows = tf.reshape(stack_rows, shape=[-1, x.shape[1], x.shape[2]*2, x.shape[3]])
+        # transpose in order to insert zeros for the columns
         stack_rows = tf.transpose(stack_rows, perm=[0, 2, 1, 3])
-        # zero_tensor_1 = tf.zeros(shape=stack_rows.shape, dtype=tf.float32)
+        # create zero like tensor but now like the padded one
         zero_tensor_1 = tf.zeros_like(stack_rows, dtype=tf.float32)
+        # stack both tensors
         stack_rows_cols = tf.stack([stack_rows, zero_tensor_1], axis=3)
+        # reshape for zero insertion between the columns
         us_padded = tf.reshape(stack_rows_cols, shape=[-1, x.shape[1]*2, x.shape[2]*2, x.shape[3]])
+        # transpose back to normal
         us_padded = tf.transpose(us_padded, perm=[0, 2, 1, 3])
         return us_padded
 
     def call(self, inputs, training=None, mask=None):
-        x = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "SYMMETRIC")
-        x = tf.cast(x, tf.float32)
 
+        # border padding for convolution with low pass and high pass filters
+        x = tf.pad(inputs,
+                   [[0, 0], [self.rec_len-1, self.rec_len-1], [self.rec_len-1, self.rec_len-1], [0, 0]],
+                   "SYMMETRIC")
+        # convert to float32
+        x = tf.cast(x, tf.float32)
+        # extract approximation and details from input tensor
+        # TODO: whit if tensor shape is bigger then 4?
+        # and expand the dims for the up sampling
         ll = tf.expand_dims(x[:, :, :, 0], axis=-1)
         lh = tf.expand_dims(x[:, :, :, 1], axis=-1)
         hl = tf.expand_dims(x[:, :, :, 2], axis=-1)
@@ -142,9 +161,13 @@ class IDWT(layers.Layer):
         hl_us_pad = self.upsampler2d(hl)
         hh_us_pad = self.upsampler2d(hh)
 
+        # convolution for the rows
         ll_conv_lpf = tf.nn.conv2d(ll_us_pad, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        # transpose for the column convolution
         ll_conv_lpf_tr = tf.transpose(ll_conv_lpf, perm=[0, 2, 1, 3])
+        # convolution for the column
         ll_conv_lpf_lpf = tf.nn.conv2d(ll_conv_lpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        # transpose back to normal
         ll_conv_lpf_lpf_tr = tf.transpose(ll_conv_lpf_lpf, perm=[0, 2, 1, 3])
 
         lh_conv_lpf = tf.nn.conv2d(lh_us_pad, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
@@ -157,16 +180,19 @@ class IDWT(layers.Layer):
         hl_conv_hpf_lpf = tf.nn.conv2d(hl_conv_hpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
         hl_conv_hpf_lpf_tr = tf.transpose(hl_conv_hpf_lpf, perm=[0, 2, 1, 3])
 
-        HH_conv_hpf = tf.nn.conv2d(hh_us_pad, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        HH_conv_hpf_tr = tf.transpose(HH_conv_hpf, perm=[0, 2, 1, 3])
-        HH_conv_hpf_hpf = tf.nn.conv2d(HH_conv_hpf_tr, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        HH_conv_hpf_hpf_tr = tf.transpose(HH_conv_hpf_hpf, perm=[0, 2, 1, 3])
+        hh_conv_hpf = tf.nn.conv2d(hh_us_pad, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        hh_conv_hpf_tr = tf.transpose(hh_conv_hpf, perm=[0, 2, 1, 3])
+        hh_conv_hpf_hpf = tf.nn.conv2d(hh_conv_hpf_tr, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
+        hh_conv_hpf_hpf_tr = tf.transpose(hh_conv_hpf_hpf, perm=[0, 2, 1, 3])
 
-        LL_LH = tf.math.add(ll_conv_lpf_lpf_tr, lh_conv_lpf_hpf_tr)
-        HL_HH = tf.math.add(hl_conv_hpf_lpf_tr, HH_conv_hpf_hpf_tr)
+        # add all together
+        ll_lh = tf.math.add(ll_conv_lpf_lpf_tr, lh_conv_lpf_hpf_tr)
+        hl_hh = tf.math.add(hl_conv_hpf_lpf_tr, hh_conv_hpf_hpf_tr)
 
-        reconstructed = tf.math.add(LL_LH, HL_HH)
-        return reconstructed[:, 5:-4, 5:-4, :]
+        reconstructed = tf.math.add(ll_lh, hl_hh)
+        # crop the paded part
+        crop = (self.rec_len - 1)*2
+        return reconstructed[:, crop-1:-crop, crop-1:-crop, :]
 
 
 if __name__ == "__main__":
