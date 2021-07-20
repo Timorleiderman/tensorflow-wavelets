@@ -1,5 +1,6 @@
 clear
 
+addpath utils
 f = imread('../../input/LennaGrey.png');
 % f = double(rgb2gray(f));
 f = double(f);
