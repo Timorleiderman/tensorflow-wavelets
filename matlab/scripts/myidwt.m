@@ -4,13 +4,13 @@
 
 function [X] = myidwt(cA, cD, LoR, HiR)
 
-lr = length(LoR)-1;
+lr = length(LoR);
 
-conv_type = 'same';
+conv_type = 'valid';
 
 % extend the signal by the width of the filter
-cA = wextend('1d','sym',cA, lr);
-cD = wextend('1d','sym',cD, lr);
+cA = wextend('1d','sym',cA, lr-1);
+cD = wextend('1d','sym',cD, lr-1);
 
 N = length(cA)*2;
 %upsample

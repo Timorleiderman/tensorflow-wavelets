@@ -7,7 +7,7 @@ lf = length(LoD);
 % extend the signal by the width of the filter
 f = wextend('1d','sym',X, lf-1);
 
-conv_type = 'same';
+conv_type = 'valid';
 % convolve and down sample for approximation
 a = conv(f,LoD,conv_type);
 a_ds = a(1:2:end);
