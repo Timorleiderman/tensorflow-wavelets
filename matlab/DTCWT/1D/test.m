@@ -1,43 +1,36 @@
 close all
 clear
 
-analysis_filter = [
-                  0  -0.01122679215254
-                  0   0.01122679215254
-  -0.08838834764832   0.08838834764832
-   0.08838834764832   0.08838834764832
-   0.69587998903400  -0.69587998903400
-   0.69587998903400   0.69587998903400
-   0.08838834764832  -0.08838834764832
-  -0.08838834764832  -0.08838834764832
-   0.01122679215254                  0
-   0.01122679215254                  0
-];
+x = 1:256;      % Test signal
+J = 2;                 % number of stages
+[Faf, Fsf] = FSfarras; % 1st stage anal. & synth. filters
+[af, sf] = dualfilt1;
+w = dualtree(x, J, Faf, af); 
+y = idualtree(w, J, Fsf, sf);
 
-sf = af(end:-1:1, :);
-x = 1:64;
-N = length(x);
-L = length(analysis_filter)/2;
+FS_LoD_t1 = Faf{1}(:,1);
+FS_HiD_t1 = Faf{1}(:,2);
+FS_LoD_t2 = Faf{2}(:,1);
+FS_HiD_t2 = Faf{2}(:,2);
+LoD_t1 = af{1}(:,1);
+HiD_t1 = af{1}(:,2);
+LoD_t2 = af{2}(:,1);
+HiD_t2 = af{2}(:,2);
 
-x_circ_shift = cshift(x,-L);
+FS_LoR_t1 = Fsf{1}(:,1);
+FS_HiR_t1 = Fsf{1}(:,2);
+FS_LoR_t2 = Fsf{2}(:,1);
+FS_HiR_t2 = Fsf{2}(:,2);
+LoR_t1 = sf{1}(:,1);
+HiR_t1 = sf{1}(:,2);
+LoR_t2 = sf{2}(:,1);
+HiR_t2 = sf{2}(:,2);
 
-% lowpass filter
-lo = upfirdn(x_circ_shift, analysis_filter(:,1), 1, 2);
-lo(1:L) = lo(N/2+[1:L]) + lo(1:L);
-lo = lo(1:N/2);
+w_my = mydualtree(x, J, FS_LoD_t1, FS_HiD_t1,FS_LoD_t2, FS_HiD_t2, LoD_t1, HiD_t1, LoD_t2, HiD_t2);
+y_my = myidualtree(w_my, J, FS_LoR_t1, FS_HiR_t1,FS_LoR_t2, FS_HiR_t2, LoR_t1, HiR_t1, LoR_t2, HiR_t2);
 
-% highpass filter
-hi = upfirdn(x_circ_shift, analysis_filter(:,2), 1, 2);
-hi(1:L) = hi(N/2+[1:L]) + hi(1:L);
-hi = hi(1:N/2);
-
-x_extend = wextend('1d','sym',x, L-1);
-conv_type = 'valid';
-% convolve and down sample for approximation
-a = conv(x_extend,analysis_filter(:,1),conv_type);
-a_ds = a(1:2:end);
-
-% convolve and down sample for details
-d = conv(x_extend,analysis_filter(:,2),conv_type);
-d_ds = d(1:2:end);
-
+err = max(y_my - y);    
+err_w11 = max(w{1}{1} - w_my{1}{1});
+err_w12 = max(w{1}{2} - w_my{1}{2});
+err_w21 = max(w{2}{1} - w_my{2}{1});
+err_w22 = max(w{2}{2} - w_my{2}{2});
