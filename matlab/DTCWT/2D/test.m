@@ -1,8 +1,8 @@
 close all
 clear
 
-x = rand(256,128);
-J = 2;
+x = rand(32,32);
+J = 4;
 [Faf, Fsf] = FSfarras;
 [af, sf] = dualfilt1;
 w = dualtree2D(x, J, Faf, af);
@@ -28,9 +28,12 @@ HiR_t2 = sf{2}(:,2);
 w_my = mydualtree2D(x, J, FS_LoD_t1, FS_HiD_t1,FS_LoD_t2, FS_HiD_t2, LoD_t1, HiD_t1, LoD_t2, HiD_t2);
 
 
-y = idualtree2D(w_my, J, Fsf, sf);
+y = idualtree2D(w, J, Fsf, sf);
+y_my = myidualtree2D(w_my, J, FS_LoR_t1, FS_HiR_t1,FS_LoR_t2, FS_HiR_t2, LoR_t1, HiR_t1, LoR_t2, HiR_t2);
 
-err = x - y; 
+err_xy = max(max(x - y)); 
+err_xy_my = max(max(x - y_my)); 
+err_y_my_y = max(max(y_my - y)); 
 
 err_w111 = max(max(w{1}{1}{1} - w_my{1}{1}{1}));
 err_w112 = max(max(w{1}{1}{2} - w_my{1}{1}{2}));
@@ -41,6 +44,4 @@ err_w212 = max(max(w{2}{1}{2} - w_my{2}{1}{2}));
 err_w221 = max(max(w{2}{2}{1} - w_my{2}{2}{1}));
 err_w222 = max(max(w{2}{2}{2} - w_my{2}{2}{2}));
 
-err_w31 = max(max(w{3}{1} - w_my{3}{1}));
-
-max(max(abs(err)))
+err_wJ1 = max(max(w{J+1}{1} - w_my{J+1}{1}));

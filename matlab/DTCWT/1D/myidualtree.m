@@ -1,4 +1,4 @@
-function y = myidualtree(w, J, FS_LoR_t1, FS_HiR_t1,FS_LoR_t2, FS_HiR_t2, LoR_t1, HiR_t1, LoR_t2, HiR_t2);
+function y = myidualtree(w, J, FS_LoR_t1, FS_HiR_t1,FS_LoR_t2, FS_HiR_t2, LoR_t1, HiR_t1, LoR_t2, HiR_t2)
 
 % Inverse Dual-tree Complex DWT
 % Tree 1
