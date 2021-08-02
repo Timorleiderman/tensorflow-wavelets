@@ -21,7 +21,8 @@ LH_us_conv = conv2(LH_us,HiR(:),conv_type);
 % add approximation and details
 LL_LH = LL_us_conv + LH_us_conv;
 LL_LH = LL_LH(L+1:end-L-2,:);
-LL_LH(1:L1-2, :) = LL_LH(1:L1-2, :) + LL_LH(w_ex+[1:L1-2], :);
+
+LL_LH(1:L1-2, :) = LL_LH(1:L1-2, :) + LL_LH(2*w+[1:L1-2], :);
 LL_LH = LL_LH(1:2*w, :);
 % circular shift
 n = 0:2*w-1;
@@ -43,7 +44,7 @@ HH_us_conv = conv2(HH_us,HiR(:),conv_type);
 HL_HH = HL_us_conv + HH_us_conv;
 HL_HH = HL_HH(L+1:end-L-2,:);
 
-HL_HH(1:L1-2, :) = HL_HH(1:L1-2, :) + HL_HH(w_ex+[1:L1-2], :);
+HL_HH(1:L1-2, :) = HL_HH(1:L1-2, :) + HL_HH(2*w+[1:L1-2], :);
 
 % circular shift
 n = 0:2*w-1;
@@ -60,12 +61,8 @@ HL_HH_us = zeros(2*h_ex,w_ex);
 LL_LH_us(1:2:end,:) =  LL_LH_ex;
 HL_HH_us(1:2:end,:) =  HL_HH_ex;
 
-
-
 LL_LH_us_conv = conv2(LL_LH_us,LoR(:),conv_type);
 HL_HH_us_conv = conv2(HL_HH_us,HiR(:),conv_type);
-
-
 
 y = LL_LH_us_conv + HL_HH_us_conv;
 y = y(L+1:end-L-2,:);
@@ -75,12 +72,9 @@ y = y(1:2*h, :);
 % circular shift
 n = 0:2*h-1;
 n = mod(n-(1-L1/2), 2*h);
-y = y(n+1,:);
+
 % output
-lo = sfb2D_A(cA,    cD{1}, [LoR(:), HiR(:)], 2);
-hi = sfb2D_A(cD{2}, cD{3}, [LoR(:), HiR(:)], 2);
-% filter along columns
-y_ref = sfb2D_A(lo, hi, [LoR(:), HiR(:)], 1);
+y = y(n+1,:);
 
 
 
