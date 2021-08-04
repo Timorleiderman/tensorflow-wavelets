@@ -8,3 +8,4 @@ logs
 *__pycache__*
 *.asv
 *.png
+output/*
