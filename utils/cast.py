@@ -13,6 +13,7 @@ def tf_to_ndarray(data, datatype=tf.float64):
 
 def cast_like_matlab_uint8_2d(data):
 
+    data = np.clip(data, 0, 255)
     h, w = data.shape
     for row in range(h):
         for col in range(w):
@@ -22,5 +23,5 @@ def cast_like_matlab_uint8_2d(data):
             elif frac <= 0.5:
                 data[row, col] = np.floor(data[row, col])
 
-    data_clip = np.clip(data, 0, 255)
-    return data_clip.astype('uint8')
+
+    return data.astype('uint8')

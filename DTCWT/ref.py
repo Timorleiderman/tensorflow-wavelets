@@ -9,10 +9,28 @@ import filters
 
 from utils.write_raw import tensor_to_write_raw, write_raw
 from utils.cast import tf_to_ndarray
-
+from Scripts.debug import debug_raw
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+
+def roll_pad(data, pad_len):
+
+    # circular shift
+    # This procedure (periodic extension) can create
+    # undesirable artifacts at the beginning and end
+    # of the subband signals, however, it is the most
+    # convenient solution.
+    # When the analysis and synthesis filters are exactly symmetric,
+    # a different procedure (symmetric extension) can be used,
+    # that avoids the artifacts associated with periodic extension
+    data_roll = tf.roll(data, shift=-pad_len, axis=1)
+    # zero padding
+    data_roll_pad = tf.pad(data_roll,
+                              [[0, 0], [pad_len, pad_len], [0, 0], [0, 0]],
+                              mode='CONSTANT',
+                              constant_values=0)
+    return data_roll_pad
 
 
 def fir_down_sample(data, fir):
@@ -60,6 +78,12 @@ def construct_tf_filter(lod_row, hid_row, lod_col, hid_col):
     return lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf
 
 
+def add_sub(a, b):
+    add = (a + b) / math.sqrt(2)
+    sub = (a - b) / math.sqrt(2)
+    return add, sub
+
+
 def analysis_filter_bank2d(x, lod_row, hid_row, lod_col, hid_col):
     # parameters
     conv_type = 'same'
@@ -67,24 +91,10 @@ def analysis_filter_bank2d(x, lod_row, hid_row, lod_col, hid_col):
     w = int(x.shape[2])
     filt_len = int(lod_row.shape[1])
 
-    # circular shift
-    # This procedure (periodic extension) can create
-    # undesirable artifacts at the beginning and end
-    # of the subband signals, however, it is the most
-    # convenient solution.
-    # When the analysis and synthesis filters are exactly symmetric,
-    # a different procedure (symmetric extension) can be used,
-    # that avoids the artifacts associated with periodic extension
-    # roll only rows
-    x_roll = tf.roll(x, shift=-(filt_len//2), axis=1)
-    # zero padding
-    x_norm_roll_padd = tf.pad(x_roll,
-                              [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
-                              mode='CONSTANT',
-                              constant_values=0)
+    x_roll_padd = roll_pad(x, filt_len//2)
 
-    lo_conv_ds = fir_down_sample(x_norm_roll_padd, lod_row)
-    hi_conv_ds = fir_down_sample(x_norm_roll_padd, hid_row)
+    lo_conv_ds = fir_down_sample(x_roll_padd, lod_row)
+    hi_conv_ds = fir_down_sample(x_roll_padd, hid_row)
 
     # # crop to needed dims
     lo = circular_shift_fix_crop(lo_conv_ds, filt_len//2, h//2)
@@ -94,19 +104,8 @@ def analysis_filter_bank2d(x, lod_row, hid_row, lod_col, hid_col):
     lo_tr = tf.transpose(lo, perm=[0, 2, 1, 3])
     hi_tr = tf.transpose(hi, perm=[0, 2, 1, 3])
 
-    lo_tr_roll = tf.roll(lo_tr, shift=-(filt_len//2), axis=1)
-    hi_tr_roll = tf.roll(hi_tr, shift=-(filt_len//2), axis=1)
-
-    # zero padding
-    lo_tr_roll_padd = tf.pad(lo_tr_roll,
-                              [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
-                              mode='CONSTANT',
-                              constant_values=0)
-
-    hi_tr_roll_padd = tf.pad(hi_tr_roll,
-                             [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
-                             mode='CONSTANT',
-                             constant_values=0)
+    lo_tr_roll_padd = roll_pad(lo_tr, filt_len//2)
+    hi_tr_roll_padd = roll_pad(hi_tr, filt_len//2)
 
     lo_lo_conv_ds = fir_down_sample(lo_tr_roll_padd, lod_col)
     lo_hi_conv_ds = fir_down_sample(lo_tr_roll_padd, hid_col)
@@ -126,11 +125,21 @@ def analysis_filter_bank2d(x, lod_row, hid_row, lod_col, hid_col):
     return [lo_lo, [lo_hi, hi_lo, hi_hi]]
 
 
+def synthesis_filter_bank2d(ca, cd, lor_row, hir_row, lor_col, hir_col):
+
+    h = int(ca.shape[1])
+    w = int(ca.shape[2])
+    filt_len = int(lor_row.shape[1])
+
+
+    return []
+
 def dualtreecplx2d(x, J, Faf, af):
 
     # normalizetion
     x_norm = tf.math.divide(x, 2)
 
+    # 2 trees J+1 lists
     w = [[[[],[]] for x in range(2)] for i in range(J+1)]
 
     for m in range(2):
@@ -138,28 +147,51 @@ def dualtreecplx2d(x, J, Faf, af):
             lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf = construct_tf_filter(Faf[m][0], Faf[m][1],
                                                                                  Faf[n][0], Faf[n][1])
             [lo, w[0][m][n]] = analysis_filter_bank2d(x_norm, lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf)
-
             for j in range(1, J):
-                lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf = construct_tf_filter(af[m][0], af[m][0],
+                lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf = construct_tf_filter(af[m][0], af[m][1],
                                                                                      af[n][0], af[n][1])
 
                 [lo, w[j][m][n]] = analysis_filter_bank2d(lo, lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf)
-                aaaa = tf_to_ndarray(lo)
-
             w[J][m][n] = lo
 
     for j in range(J):
         for m in range(3):
-            a = w[j][0][0][m]
-            b = w[j][1][1][m]
-            w[j][0][0][m] = (a + b) / math.sqrt(2)
-            w[j][1][1][m] = (a - b) / math.sqrt(2)
 
-            a = w[j][0][1][m]
-            b = w[j][1][0][m]
-            w[j][0][1][m] = (a + b) / math.sqrt(2)
-            w[j][1][0][m] = (a - b) / math.sqrt(2)
+            w[j][0][0][m], w[j][1][1][m] = add_sub(w[j][0][0][m], w[j][1][1][m])
+            w[j][0][1][m], w[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
+
     return w
+
+
+def idualtreecplx2d(w, J, Fsf, sf):
+
+    height = int(w[0][0][0][0].shape[1]*2)
+    width = int(w[0][0][0][0].shape[2]*2)
+
+    y = tf.zeros((height, width), dtype=tf.float32)
+
+    for j in range(J):
+        for m in range(3):
+
+            w[j][0][0][m], w[j][1][1][m] = add_sub(w[j][0][0][m], w[j][1][1][m])
+            w[j][0][1][m], w[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
+
+    for m in range(2):
+        for n in range(2):
+            lo = w[J][m][n]
+            for j in range(J, 1, -1):
+                lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(sf[m][0], sf[m][1],
+                                                                                     sf[n][0], sf[n][1])
+                lo = synthesis_filter_bank2d(lo, w[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
+
+            lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(Fsf[m][0], Fsf[m][1],
+                                                                                 Fsf[n][0], Fsf[n][1])
+            lo = synthesis_filter_bank2d(lo, w[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
+            y = tf.math.add(y, lo)
+
+    y = tf.math.divide(y, 2)
+    return y
+
 
 img_grey = cv2.imread("../input/LennaGrey.png",0)
 w, h = img_grey.shape
@@ -172,25 +204,10 @@ x_f32 = tf.cast(img_grey, dtype=tf.float32)
 x_f32 = tf.expand_dims(x_f32, axis=-1)
 x_f32 = tf.expand_dims(x_f32, axis=0)
 
-w = dualtreecplx2d(x_f32, 2, Faf, af)
-
-lo11 = tf_to_ndarray(w[2][0][0])
-lo12 = tf_to_ndarray(w[2][0][1])
-lo21 = tf_to_ndarray(w[2][1][0])
-lo22 = tf_to_ndarray(w[2][1][1])
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_lo11.hex", lo11)
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_lo12.hex", lo12)
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_lo21.hex", lo21)
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_lo22.hex", lo22)
-
-ch_t2121 = tf_to_ndarray(w[1][0][1][0])
-cv_t2122 = tf_to_ndarray(w[1][0][1][1])
-cd_t2123 = tf_to_ndarray(w[1][0][1][2])
-
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_ch_t2121.hex", ch_t2121)
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_cv_t2122.hex", cv_t2122)
-tensor_to_write_raw(r"G:\My Drive\Colab Notebooks\MWCNN\output\python_cd_t2123.hex", cd_t2123)
-
+J = 2
+w = dualtreecplx2d(x_f32, J, Faf, af)
+y = idualtreecplx2d(w, J, Fsf, sf)
+# debug_raw(w)
 
 print("yesyes")
 pass
