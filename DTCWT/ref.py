@@ -262,14 +262,11 @@ def idualtreecplx2d(w, J, Fsf, sf):
     for m in range(2):
         for n in range(2):
             lo = w[J][m][n]
-            for j in [x for x in range(J)][::-1]:
-                lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(sf[m][0], sf[m][1],
-                                                                                     sf[n][0], sf[n][1])
+            for j in [x for x in range(1, J)][::-1]:
+                lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(sf[m][0], sf[m][1], sf[n][0], sf[n][1])
                 lo = synthesis_filter_bank2d(lo, w[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
-
-            lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(Fsf[m][0], Fsf[m][1],
-                                                                                 Fsf[n][0], Fsf[n][1])
-            lo = synthesis_filter_bank2d(lo, w[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
+            lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(Fsf[m][0], Fsf[m][1],Fsf[n][0], Fsf[n][1])
+            lo = synthesis_filter_bank2d(lo, w[0][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
             y = tf.math.add(y, lo)
 
     y = tf.math.divide(y, 2)
@@ -291,6 +288,7 @@ J = 2
 w = dualtreecplx2d(x_f32, J, Faf, af)
 y = idualtreecplx2d(w, J, Fsf, sf)
 # debug_raw(w)
-
+cv2.imshow("test", tf_to_ndarray(y).astype("uint8"))
+cv2.waitKey(0)
 print("yesyes")
 pass
