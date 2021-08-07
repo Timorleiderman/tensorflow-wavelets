@@ -236,27 +236,58 @@ def dualtreecplx2d(x, J, Faf, af):
             w[j][0][1][m], w[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
 
     # concat into one big image
-    w_c = w
     for j in [x for x in range(1, J)][::-1]:
-        w_c[j][0][0] = tf.concat([tf.concat([w_c[j+1][0][0], w_c[j][0][0][0]], axis=2), tf.concat([w_c[j][0][0][1], w_c[j][0][0][2]], axis=2)], axis=1)
-        w_c[j][0][1] = tf.concat([tf.concat([w_c[j+1][0][1], w_c[j][0][1][0]], axis=2), tf.concat([w_c[j][0][1][1], w_c[j][0][1][2]], axis=2)], axis=1)
-        w_c[j][1][0] = tf.concat([tf.concat([w_c[j+1][1][0], w_c[j][1][0][0]], axis=2), tf.concat([w_c[j][1][0][1], w_c[j][1][0][2]], axis=2)], axis=1)
-        w_c[j][1][1] = tf.concat([tf.concat([w_c[j+1][1][1], w_c[j][1][1][0]], axis=2), tf.concat([w_c[j][1][1][1], w_c[j][1][1][2]], axis=2)], axis=1)
+        w[j][0][0] = tf.concat([tf.concat([w[j+1][0][0], w[j][0][0][0]], axis=2), tf.concat([w[j][0][0][1], w[j][0][0][2]], axis=2)], axis=1)
+        w[j][0][1] = tf.concat([tf.concat([w[j+1][0][1], w[j][0][1][0]], axis=2), tf.concat([w[j][0][1][1], w[j][0][1][2]], axis=2)], axis=1)
+        w[j][1][0] = tf.concat([tf.concat([w[j+1][1][0], w[j][1][0][0]], axis=2), tf.concat([w[j][1][0][1], w[j][1][0][2]], axis=2)], axis=1)
+        w[j][1][1] = tf.concat([tf.concat([w[j+1][1][1], w[j][1][1][0]], axis=2), tf.concat([w[j][1][1][1], w[j][1][1][2]], axis=2)], axis=1)
 
-    w_0 = tf.concat([tf.concat([w_c[j][0][0], w_c[0][0][0][0]], axis=2), tf.concat([w_c[0][0][0][1], w_c[0][0][0][2]], axis=2)], axis=1)
-    w_1 = tf.concat([tf.concat([w_c[j][0][1], w_c[0][0][1][0]], axis=2), tf.concat([w_c[0][0][1][1], w_c[0][0][1][2]], axis=2)], axis=1)
-    w_2 = tf.concat([tf.concat([w_c[j][1][0], w_c[0][1][0][0]], axis=2), tf.concat([w_c[0][1][0][1], w_c[0][1][0][2]], axis=2)], axis=1)
-    w_3 = tf.concat([tf.concat([w_c[j][1][1], w_c[0][1][1][0]], axis=2), tf.concat([w_c[0][1][1][1], w_c[0][1][1][2]], axis=2)], axis=1)
+    w_0 = tf.concat([tf.concat([w[j][0][0], w[0][0][0][0]], axis=2), tf.concat([w[0][0][0][1], w[0][0][0][2]], axis=2)], axis=1)
+    w_1 = tf.concat([tf.concat([w[j][0][1], w[0][0][1][0]], axis=2), tf.concat([w[0][0][1][1], w[0][0][1][2]], axis=2)], axis=1)
+    w_2 = tf.concat([tf.concat([w[j][1][0], w[0][1][0][0]], axis=2), tf.concat([w[0][1][0][1], w[0][1][0][2]], axis=2)], axis=1)
+    w_3 = tf.concat([tf.concat([w[j][1][1], w[0][1][1][0]], axis=2), tf.concat([w[0][1][1][1], w[0][1][1][2]], axis=2)], axis=1)
 
     w_1234 = tf.concat([tf.concat([w_0, w_1], axis=2), tf.concat([w_2, w_3], axis=2)], axis=1)
 
     return w_1234
 
 
+def reconstruct_w_level2(w):
+    w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
+
+    ws01 = tf.split(tf.split(wc, 2, axis=1)[0], 2, axis=2)
+    ws02 = tf.split(tf.split(wc, 2, axis=1)[1], 2, axis=2)
+    w_split = [ws01] + [ws02]
+
+    for m in range(2):
+        for n in range(2):
+            ws11 = tf.split(tf.split(w_split[m][n], 2, axis=1)[0], 2, axis=2)
+            ws12 = tf.split(tf.split(w_split[m][n], 2, axis=1)[1], 2, axis=2)
+            w_rec[0][m][n] = [ws11[1]] + ws12
+            ll_lh = tf.split(tf.split(ws11[0], 2, axis=1)[0], 2, axis=2)
+            hl_hh = tf.split(tf.split(ws11[0], 2, axis=1)[1], 2, axis=2)
+            ll = ll_lh[0]
+            lh_hl_ll = [ll_lh[1]] + hl_hh
+            w_rec[1][m][n] = lh_hl_ll
+            w_rec[2][m][n] = ll
+
+    return w_rec
+
 def idualtreecplx2d(w, J, Fsf, sf):
 
-    height = int(w[0][0][0][0].shape[1]*2)
-    width = int(w[0][0][0][0].shape[2]*2)
+    w_rec = reconstruct_w_level2(w)
+
+
+    # cd0[0] = w_split1[0][:, :128, 128:256, :]
+    # cd0[1] = w_split1[0][:, 128:256, :128, :]
+    # cd0[2] = w_split1[0][:, 128:256, 128:256, :]
+    #
+    # ll1 = w_split1[1][:, :128, :128, :]
+    # ll2 = w_split1[2][:, :128, :128, :]
+    # ll3 = w_split1[3][:, :128, :128, :]
+
+    height = int(w_rec[0][0][0][0].shape[1]*2)
+    width = int(w_rec[0][0][0][0].shape[2]*2)
 
     y = tf.zeros((height, width), dtype=tf.float32)
 
@@ -265,27 +296,27 @@ def idualtreecplx2d(w, J, Fsf, sf):
     for j in range(J):
         for m in range(3):
 
-            w_i[j][0][0][m], w_i[j][1][1][m] = add_sub(w[j][0][0][m], w[j][1][1][m])
-            w_i[j][0][1][m], w_i[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
+            w_i[j][0][0][m], w_i[j][1][1][m] = add_sub(w_rec[j][0][0][m], w_rec[j][1][1][m])
+            w_i[j][0][1][m], w_i[j][1][0][m] = add_sub(w_rec[j][0][1][m], w_rec[j][1][0][m])
 
     for m in range(2):
         for n in range(2):
-            lo = w[J][m][n]
+            lo = w_rec[J][m][n]
             for j in [x for x in range(1, J)][::-1]:
-                lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(sf[m][0], sf[m][1], sf[n][0], sf[n][1])
-                lo = synthesis_filter_bank2d(lo, w_i[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
-            lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(Fsf[m][0], Fsf[m][1],Fsf[n][0], Fsf[n][1])
-            lo = synthesis_filter_bank2d(lo, w_i[0][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
+                lo = synthesis_filter_bank2d(lo, w_i[j][m][n], sf[m][0], sf[m][1], sf[n][0], sf[n][1])
+            lo = synthesis_filter_bank2d(lo, w_i[0][m][n], Fsf[m][0], Fsf[m][1],Fsf[n][0], Fsf[n][1])
             y = tf.math.add(y, lo)
 
     y = tf.math.divide(y, 2)
     return y
+
 
 def list_to_tf(data):
     list_len = len(data)
     data_tf = tf.constant(data)
     data_tf = tf.reshape(data_tf, (1, list_len, 1, 1))
     return data_tf
+
 
 def duel_filter_tf(duelfilt):
     filt_len = len(duelfilt[0][0])
@@ -301,7 +332,7 @@ def duel_filter_tf(duelfilt):
     return duelfilt_tf
 
 
-img_grey = cv2.imread("../input/Lenna_orig.png", 1)
+img_grey = cv2.imread("../input/Lenna_orig.png", 0)
 
 
 [Faf, Fsf] = filters.FSfarras()
@@ -328,13 +359,13 @@ else:
     x_f32 = tf.expand_dims(x_f32, axis=-1)
 
 x_f32 = tf.expand_dims(x_f32, axis=0)
-J = 3
-w = dualtreecplx2d(x_f32, J, Faf, af)
-#y = idualtreecplx2d(w, J, Fsf, sf)
+J = 2
+wc = dualtreecplx2d(x_f32, J, Faf, af)
+y = idualtreecplx2d(wc, J, Fsf, sf)
 
 
 # debug_raw(w)
-cv2.imshow("test1", tf_to_ndarray(w/2).astype("uint8"))
+cv2.imshow("test1", tf_to_ndarray(y).astype("uint8"))
 
 cv2.waitKey(0)
 print("yesyes")

@@ -3,6 +3,28 @@ import math
 import tensorflow as tf
 
 
+def reconstruct_w_level2(w):
+    w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
+
+    ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
+    ws02 = tf.split(tf.split(w, 2, axis=1)[1], 2, axis=2)
+    w_split = [ws01] + [ws02]
+
+    for m in range(2):
+        for n in range(2):
+            ws11 = tf.split(tf.split(w_split[m][n], 2, axis=1)[0], 2, axis=2)
+            ws12 = tf.split(tf.split(w_split[m][n], 2, axis=1)[1], 2, axis=2)
+            w_rec[0][m][n] = [ws11[1]] + ws12
+            ll_lh = tf.split(tf.split(ws11[0], 2, axis=1)[0], 2, axis=2)
+            hl_hh = tf.split(tf.split(ws11[0], 2, axis=1)[1], 2, axis=2)
+            ll = ll_lh[0]
+            lh_hl_ll = [ll_lh[1]] + hl_hh
+            w_rec[1][m][n] = lh_hl_ll
+            w_rec[2][m][n] = ll
+
+    return w_rec
+
+
 def roll_pad(data, pad_len):
 
     # circular shift
@@ -153,3 +175,76 @@ def analysis_filter_bank2d(x, lod_row, hid_row, lod_col, hid_col):
     hi_hi = tf.transpose(hi_hi, perm=[0, 2, 1, 3])
 
     return [lo_lo, [lo_hi, hi_lo, hi_hi]]
+
+def synthesis_filter_bank2d(ca, cd, lor_row, hir_row, lor_col, hir_col):
+
+    h = int(ca.shape[1])
+    w = int(ca.shape[2])
+    filt_len = int(lor_row.shape[1])
+
+    ll = tf.transpose(ca, perm=[0,2,1,3])
+    lh = tf.transpose(cd[0], perm=[0,2,1,3])
+    hl = tf.transpose(cd[1], perm=[0,2,1,3])
+    hh = tf.transpose(cd[2], perm=[0,2,1,3])
+
+    ll_pad = tf.pad(ll,
+                    [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
+                    mode='CONSTANT',
+                    constant_values=0)
+
+    lh_pad = tf.pad(lh,
+                    [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
+                    mode='CONSTANT',
+                    constant_values=0)
+
+    hl_pad = tf.pad(hl,
+                    [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
+                    mode='CONSTANT',
+                    constant_values=0)
+
+    hh_pad = tf.pad(hh,
+                    [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
+                    mode='CONSTANT',
+                    constant_values=0)
+
+    ll_conv = up_sample_fir(ll_pad, lor_col)
+    lh_conv = up_sample_fir(lh_pad, hir_col)
+    hl_conv = up_sample_fir(hl_pad, lor_col)
+    hh_conv = up_sample_fir(hh_pad, hir_col)
+
+    ll_lh_add = tf.math.add(ll_conv, lh_conv)
+    hl_hh_add = tf.math.add(hl_conv, hh_conv)
+
+    ll_lh_crop = ll_lh_add[:, filt_len//2:-filt_len//2-2, :, :]
+    hl_hh_crop = hl_hh_add[:, filt_len//2:-filt_len//2-2, :, :]
+
+    ll_lh_fix_crop = circular_shift_fix_crop(ll_lh_crop, filt_len-2, 2*w)
+    hl_hh_fix_crop = circular_shift_fix_crop(hl_hh_crop, filt_len-2, 2*w)
+
+    ll_lh_fix_crop_roll = tf.roll(ll_lh_fix_crop, shift=1-filt_len//2, axis=1)
+    hl_hh_fix_crop_roll = tf.roll(hl_hh_fix_crop, shift=1-filt_len//2, axis=1)
+
+    ll_lh = tf.transpose(ll_lh_fix_crop_roll, perm=[0, 2, 1, 3])
+    hl_hh = tf.transpose(hl_hh_fix_crop_roll, perm=[0, 2, 1, 3])
+
+    ll_lh_pad = tf.pad(ll_lh,
+                       [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
+                       mode='CONSTANT',
+                       constant_values=0)
+
+    hl_hh_pad = tf.pad(hl_hh,
+                       [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
+                       mode='CONSTANT',
+                       constant_values=0)
+
+    ll_lh_conv = up_sample_fir(ll_lh_pad, lor_row)
+    hl_hh_conv = up_sample_fir(hl_hh_pad, hir_row)
+
+    ll_lh_hl_hh_add = tf.math.add(ll_lh_conv,hl_hh_conv)
+    ll_lh_hl_hh_add_crop = ll_lh_hl_hh_add[:, filt_len//2:-filt_len//2-2, :, :]
+
+    y = circular_shift_fix_crop(ll_lh_hl_hh_add_crop, filt_len-2, 2*h)
+    y = tf.roll(y, 1-filt_len//2, axis=1)
+
+    return y
+
