@@ -1,15 +1,11 @@
 import math
 import os
 import cv2
-import numpy as np
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-import filters
+from utils import filters
 
-from utils.write_raw import tensor_to_write_raw, write_raw
 from utils.cast import tf_to_ndarray
-from Scripts.debug import debug_raw
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -228,13 +224,9 @@ def dualtreecplx2d(x, J, Faf, af):
 
     for m in range(2):
         for n in range(2):
-            lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf = construct_tf_filter(Faf[m][0], Faf[m][1], Faf[n][0], Faf[n][1])
-            [lo, w[0][m][n]] = analysis_filter_bank2d(x_norm, lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf)
+            [lo, w[0][m][n]] = analysis_filter_bank2d(x_norm, Faf[m][0], Faf[m][1], Faf[n][0], Faf[n][1])
             for j in range(1, J):
-                lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf = construct_tf_filter(af[m][0], af[m][1],
-                                                                                     af[n][0], af[n][1])
-
-                [lo, w[j][m][n]] = analysis_filter_bank2d(lo, lod_row_tf, hid_row_tf, lod_col_tf, hid_col_tf)
+                [lo, w[j][m][n]] = analysis_filter_bank2d(lo, af[m][0], af[m][1], af[n][0], af[n][1])
             w[J][m][n] = lo
 
     for j in range(J):
@@ -243,7 +235,22 @@ def dualtreecplx2d(x, J, Faf, af):
             w[j][0][0][m], w[j][1][1][m] = add_sub(w[j][0][0][m], w[j][1][1][m])
             w[j][0][1][m], w[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
 
-    return w
+    # concat into one big image
+    w_c = w
+    for j in [x for x in range(1, J)][::-1]:
+        w_c[j][0][0] = tf.concat([tf.concat([w_c[j+1][0][0], w_c[j][0][0][0]], axis=2), tf.concat([w_c[j][0][0][1], w_c[j][0][0][2]], axis=2)], axis=1)
+        w_c[j][0][1] = tf.concat([tf.concat([w_c[j+1][0][1], w_c[j][0][1][0]], axis=2), tf.concat([w_c[j][0][1][1], w_c[j][0][1][2]], axis=2)], axis=1)
+        w_c[j][1][0] = tf.concat([tf.concat([w_c[j+1][1][0], w_c[j][1][0][0]], axis=2), tf.concat([w_c[j][1][0][1], w_c[j][1][0][2]], axis=2)], axis=1)
+        w_c[j][1][1] = tf.concat([tf.concat([w_c[j+1][1][1], w_c[j][1][1][0]], axis=2), tf.concat([w_c[j][1][1][1], w_c[j][1][1][2]], axis=2)], axis=1)
+
+    w_0 = tf.concat([tf.concat([w_c[j][0][0], w_c[0][0][0][0]], axis=2), tf.concat([w_c[0][0][0][1], w_c[0][0][0][2]], axis=2)], axis=1)
+    w_1 = tf.concat([tf.concat([w_c[j][0][1], w_c[0][0][1][0]], axis=2), tf.concat([w_c[0][0][1][1], w_c[0][0][1][2]], axis=2)], axis=1)
+    w_2 = tf.concat([tf.concat([w_c[j][1][0], w_c[0][1][0][0]], axis=2), tf.concat([w_c[0][1][0][1], w_c[0][1][0][2]], axis=2)], axis=1)
+    w_3 = tf.concat([tf.concat([w_c[j][1][1], w_c[0][1][1][0]], axis=2), tf.concat([w_c[0][1][1][1], w_c[0][1][1][2]], axis=2)], axis=1)
+
+    w_1234 = tf.concat([tf.concat([w_0, w_1], axis=2), tf.concat([w_2, w_3], axis=2)], axis=1)
+
+    return w_1234
 
 
 def idualtreecplx2d(w, J, Fsf, sf):
@@ -253,42 +260,82 @@ def idualtreecplx2d(w, J, Fsf, sf):
 
     y = tf.zeros((height, width), dtype=tf.float32)
 
+    w_i = [ [ [[list() for x in range(3)], [list() for x in range(3)]] for x in range(2)] for i in range(J+1)]
+
     for j in range(J):
         for m in range(3):
 
-            w[j][0][0][m], w[j][1][1][m] = add_sub(w[j][0][0][m], w[j][1][1][m])
-            w[j][0][1][m], w[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
+            w_i[j][0][0][m], w_i[j][1][1][m] = add_sub(w[j][0][0][m], w[j][1][1][m])
+            w_i[j][0][1][m], w_i[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
 
     for m in range(2):
         for n in range(2):
             lo = w[J][m][n]
             for j in [x for x in range(1, J)][::-1]:
                 lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(sf[m][0], sf[m][1], sf[n][0], sf[n][1])
-                lo = synthesis_filter_bank2d(lo, w[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
+                lo = synthesis_filter_bank2d(lo, w_i[j][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
             lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf = construct_tf_filter(Fsf[m][0], Fsf[m][1],Fsf[n][0], Fsf[n][1])
-            lo = synthesis_filter_bank2d(lo, w[0][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
+            lo = synthesis_filter_bank2d(lo, w_i[0][m][n], lor_row_tf, hir_row_tf, lor_col_tf, hir_col_tf)
             y = tf.math.add(y, lo)
 
     y = tf.math.divide(y, 2)
     return y
 
+def list_to_tf(data):
+    list_len = len(data)
+    data_tf = tf.constant(data)
+    data_tf = tf.reshape(data_tf, (1, list_len, 1, 1))
+    return data_tf
 
-img_grey = cv2.imread("../input/LennaGrey.png",0)
-w, h = img_grey.shape
+def duel_filter_tf(duelfilt):
+    filt_len = len(duelfilt[0][0])
+
+    tree1_lp_tf = list_to_tf(duelfilt[0][0])
+    tree1_hp_tf = list_to_tf(duelfilt[0][1])
+    tree2_lp_tf = list_to_tf(duelfilt[1][0])
+    tree2_hp_tf = list_to_tf(duelfilt[1][1])
+
+    tree1 = tf.stack((tree1_lp_tf, tree1_hp_tf), axis=0)
+    tree2 = tf.stack((tree2_lp_tf, tree2_hp_tf), axis=0)
+    duelfilt_tf = tf.stack((tree1, tree2), axis=0)
+    return duelfilt_tf
+
+
+img_grey = cv2.imread("../input/Lenna_orig.png", 1)
+
 
 [Faf, Fsf] = filters.FSfarras()
 [af, sf] = filters.duelfilt()
 
-# cast to float32
-x_f32 = tf.cast(img_grey, dtype=tf.float32)
-x_f32 = tf.expand_dims(x_f32, axis=-1)
-x_f32 = tf.expand_dims(x_f32, axis=0)
+Faf = duel_filter_tf(Faf)
+Fsf = duel_filter_tf(Fsf)
+af = duel_filter_tf(af)
+sf = duel_filter_tf(sf)
 
-J = 2
+x_f32 = tf.cast(img_grey, dtype=tf.float32)
+# cast to float32
+
+
+if len(x_f32.shape) == 3:
+    w, h, c = img_grey.shape
+
+    Faf = tf.repeat(Faf, c, axis=-1)
+    sf = tf.repeat(Fsf, c, axis=-1)
+    af = tf.repeat(af, c, axis=-1)
+    sf = tf.repeat(sf, c, axis=-1)
+else:
+    w, h = img_grey.shape
+    x_f32 = tf.expand_dims(x_f32, axis=-1)
+
+x_f32 = tf.expand_dims(x_f32, axis=0)
+J = 3
 w = dualtreecplx2d(x_f32, J, Faf, af)
-y = idualtreecplx2d(w, J, Fsf, sf)
+#y = idualtreecplx2d(w, J, Fsf, sf)
+
+
 # debug_raw(w)
-cv2.imshow("test", tf_to_ndarray(y).astype("uint8"))
+cv2.imshow("test1", tf_to_ndarray(w/2).astype("uint8"))
+
 cv2.waitKey(0)
 print("yesyes")
 pass
