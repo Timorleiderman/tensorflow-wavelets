@@ -289,7 +289,7 @@ def idualtreecplx2d(w, J, Fsf, sf):
     height = int(w_rec[0][0][0][0].shape[1]*2)
     width = int(w_rec[0][0][0][0].shape[2]*2)
 
-    y = tf.zeros((height, width), dtype=tf.float32)
+    y = tf.zeros((height, width, 1), dtype=tf.float32)
 
     w_i = [ [ [[list() for x in range(3)], [list() for x in range(3)]] for x in range(2)] for i in range(J+1)]
 
@@ -362,7 +362,7 @@ x_f32 = tf.expand_dims(x_f32, axis=0)
 J = 2
 wc = dualtreecplx2d(x_f32, J, Faf, af)
 y = idualtreecplx2d(wc, J, Fsf, sf)
-
+print(y.shape)
 
 # debug_raw(w)
 cv2.imshow("test1", tf_to_ndarray(y).astype("uint8"))

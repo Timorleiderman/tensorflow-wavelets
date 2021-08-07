@@ -69,7 +69,7 @@ class DTCWT(layers.Layer):
             w_c[j][0][1] = tf.concat([tf.concat([w_c[j+1][0][1], w_c[j][0][1][0]], axis=2), tf.concat([w_c[j][0][1][1], w_c[j][0][1][2]], axis=2)], axis=1)
             w_c[j][1][0] = tf.concat([tf.concat([w_c[j+1][1][0], w_c[j][1][0][0]], axis=2), tf.concat([w_c[j][1][0][1], w_c[j][1][0][2]], axis=2)], axis=1)
             w_c[j][1][1] = tf.concat([tf.concat([w_c[j+1][1][1], w_c[j][1][1][0]], axis=2), tf.concat([w_c[j][1][1][1], w_c[j][1][1][2]], axis=2)], axis=1)
-            print(w_c[j][0][0].shape)
+
 
         w_0 = tf.concat([tf.concat([w_c[j][0][0], w_c[0][0][0][0]], axis=2), tf.concat([w_c[0][0][0][1], w_c[0][0][0][2]], axis=2)], axis=1)
         w_1 = tf.concat([tf.concat([w_c[j][0][1], w_c[0][0][1][0]], axis=2), tf.concat([w_c[0][0][1][1], w_c[0][0][1][2]], axis=2)], axis=1)
@@ -100,6 +100,7 @@ class IDTCWT(layers.Layer):
         self.sf = duel_filter_tf(sf)
 
     def build(self, input_shape):
+
         if input_shape[-1] != 1:
             self.Faf = tf.repeat(self.Faf, input_shape[-1], axis=-1)
             self.Fsf = tf.repeat(self.Fsf, input_shape[-1], axis=-1)
@@ -112,8 +113,8 @@ class IDTCWT(layers.Layer):
 
         height = int(w_rec[0][0][0][0].shape[1]*2)
         width = int(w_rec[0][0][0][0].shape[2]*2)
-        print(height)
-        y = tf.zeros((height, width), dtype=tf.float32)
+
+        y = tf.zeros((height, width, inputs.shape[-1]), dtype=tf.float32)
 
         w_i = [[[[list() for x in range(3)], [list() for x in range(3)]] for x in range(2)] for i in range(self.level+1)]
 
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     #
 
 
-    cplx_input = layers.Input(shape=(32, 32, 1))
+    cplx_input = layers.Input(shape=(32, 32, 3))
 
     x = DTCWT(2)(cplx_input)
     x = IDTCWT(2)(x)
