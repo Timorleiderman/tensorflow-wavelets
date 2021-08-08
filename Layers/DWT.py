@@ -97,8 +97,9 @@ class DWT(layers.Layer):
         hh = dd[:, 1:dd.shape[1]:2, :, :]
 
         # concate all outputs ionto tensor
-        x = tf.concat([ll, lh, hl, hh], axis=-1)
-
+        # x = tf.concat([ll, lh, hl, hh], axis=-1)
+        x = tf.concat([tf.concat([ll, lh], axis=2),tf.concat([hl, hh], axis=2)], axis=1)
+        print(x.shape)
         return x
 
 
@@ -150,11 +151,18 @@ class IDWT(layers.Layer):
 
     def call(self, inputs, training=None, mask=None):
 
+        ll_lh_hl_hh = tf.split(inputs, 2, axis=1)
+        ll_lh = tf.split(ll_lh_hl_hh[0], 2, axis=2)
+        hl_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
+        ll_lh_conc = tf.concat(ll_lh, axis=-1)
+
+        hl_hh_conc = tf.concat(hl_hh, axis=-1)
+        x = tf.concat([ll_lh_conc, hl_hh_conc], axis=-1)
+
         # border padding for convolution with low pass and high pass filters
-        x = tf.pad(inputs,
+        x = tf.pad(x,
                    [[0, 0], [self.rec_len-1, self.rec_len-1], [self.rec_len-1, self.rec_len-1], [0, 0]],
                    self.border_pad)
-
         # convert to float32
         # x = tf.cast(x, tf.float32)
         # GPU works with float 32
@@ -165,6 +173,7 @@ class IDWT(layers.Layer):
         # extract approximation and details from input tensor
         # TODO: whit if tensor shape is bigger then 4?
         # and expand the dims for the up sampling
+
         ll = tf.expand_dims(x[:, :, :, 0], axis=-1)
         lh = tf.expand_dims(x[:, :, :, 1], axis=-1)
         hl = tf.expand_dims(x[:, :, :, 2], axis=-1)
@@ -225,28 +234,31 @@ if __name__ == "__main__":
     # model.summary()
 
     name = "db2"
-    img = cv2.imread("../input/LennaGrey.png",0)
+    img = cv2.imread("../input/LennaGrey.png", 0)
+    # img = cv2.imread("../input/Lenna_orig.png",0)
     img_ex1 = np.expand_dims(img, axis=-1)
     img_ex2 = np.expand_dims(img_ex1, axis=0)
+    # img_ex2 = np.expand_dims(img, axis=0)
 
     model = keras.Sequential()
     model.add(layers.InputLayer(input_shape=img_ex1.shape))
     model.add(DWT(name=name))
-    # model.summary()
+    model.summary()
     coeffs = model.predict(img_ex2)
-    LL = coeffs[0, ..., 0]
-    LH = coeffs[0, ..., 1]
-    HL = coeffs[0, ..., 2]
-    HH = coeffs[0, ..., 3]
+    _, w_coef, h_coef, c_coef = coeffs.shape
+    LL = coeffs[0, 0:w_coef//2, 0:h_coef//2, 0]
+    LH = coeffs[0, 0:w_coef//2, h_coef//2:, 0]
+    HL = coeffs[0, w_coef//2:, 0:h_coef//2, 0]
+    HH = coeffs[0, w_coef//2:, h_coef//2:, 0]
 
     model = keras.Sequential()
-    model.add(layers.InputLayer(input_shape=coeffs[0].shape))
+    model.add(layers.InputLayer(input_shape=coeffs.shape[1:]))
     model.add(IDWT(name=name))
     model.summary()
 
     my_recon = model.predict(coeffs)
     img_my_rec = my_recon[0, :, :, 0]
-    coeffs2 = pywt.wavedec2(img, name,level=1)
+    coeffs2 = pywt.wavedec2(img, name, level=1)
 
     LL2 = coeffs2[0]
     LH2 = coeffs2[1][0]
