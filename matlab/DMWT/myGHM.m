@@ -1,8 +1,7 @@
-function [L1L1, L1H1, H1L1, H1H1, L1L2, L1H2, H1L2, H1H2, ...
-          L2L1, L2H1, H2L1, H2H1, L2L2, L2H2, H2L2, H2H2] = GHM(img)
+function [b] = GHM(img)
 
-dwt_pad_type = 'sym';
-conv_type= 'valid';
+dwt_pad_type = 'zpd';
+conv_type= 'same';
 
 % initialize the coefficients
 H0 = [3/(5*sqrt(2)), 4/5;
@@ -46,21 +45,33 @@ fl = length(H_lpf1) - 1;
 img_oversampel(1:2:2*h,:) = img;
 img_oversampel(2:2:2*h,:) = img.*1/sqrt(2);
 
-img_oversampel_col_pad = wextend('addcol', dwt_pad_type,img_oversampel,fl);
+L = length(H_lpf1)/2;
+% circular shift 2d
+n = 0:h*2-1;
+n = mod(n+L, h*2);
+img_oversampel = img_oversampel(n+1,:);
+
+% zero pad borders
+img_oversampel_row_pad = wextend('addrow','zpd',img_oversampel, L);
+%img_oversampel_col_pad = wextend('addcol', dwt_pad_type,img_oversampel,fl);
 % img_padd = wextend('addcol', dwt_pad_type, img, fl);
 
-approx_conv_lp1 = conv2(img_oversampel_col_pad, H_lpf1(:), conv_type);
-approx_conv_lp2 = conv2(img_oversampel_col_pad, H_lpf2(:), conv_type);
-approx_conv_hp1 = conv2(img_oversampel_col_pad, G_hpf1(:), conv_type);
-approx_conv_hp2 = conv2(img_oversampel_col_pad, G_hpf2(:), conv_type);
-% load("z.mat")
-% zz = z(1:4:end,:);
+approx_conv_lp1 = conv2(img_oversampel_row_pad, H_lpf1(:), conv_type);
+approx_conv_lp2 = conv2(img_oversampel_row_pad, H_lpf2(:), conv_type);
+approx_conv_hp1 = conv2(img_oversampel_row_pad, G_hpf1(:), conv_type);
+approx_conv_hp2 = conv2(img_oversampel_row_pad, G_hpf2(:), conv_type);
+load("z.mat")
+zz = z(1:4:end,:);
 [h_padd, w_padd] = size(approx_conv_lp1);
 
-approx_lp1_ds1 = approx_conv_lp1(:, 1:2:w_padd);
-approx_lp2_ds2 = approx_conv_lp2(:, 1:2:w_padd);
-approx_hp1_ds1 = approx_conv_hp1(:, 1:2:w_padd);
-approx_hp2_ds2 = approx_conv_hp2(:, 1:2:w_padd);
+
+approx_lp1_ds1 = approx_conv_lp1(1:4:h_padd,: );
+approx_lp1_ds1(1:L, :) = approx_lp1_ds1(1:L, :) + approx_lp1_ds1([1:L]+h_padd/4, :);
+
+approx_lp2_ds2 = approx_conv_lp2(1:4:h_padd,: );
+approx_hp1_ds1 = approx_conv_hp1(1:4:h_padd,: );
+approx_hp2_ds2 = approx_conv_hp2(1:4:h_padd,: );
+
 
 [h_padd_ds, w_padd_ds] = size(approx_lp1_ds1');
 
@@ -77,21 +88,21 @@ approx_hp2_ds_oversampel(1:2:2*h_padd_ds,:) = approx_hp2_ds2';
 approx_hp2_ds_oversampel(2:2:2*h_padd_ds,:) = 1/sqrt(2)*approx_hp2_ds2';
 
 % add rows but its already transposed so add col
-approx_lp_ds1_row_pad = wextend('addcol', dwt_pad_type, approx_lp1_ds_oversampel,fl);
-approx_lp_ds2_row_pad = wextend('addcol', dwt_pad_type, approx_lp2_ds_oversampel,fl);
-approx_hp_ds1_row_pad = wextend('addcol', dwt_pad_type, approx_hp1_ds_oversampel,fl);
-approx_hp_ds2_row_pad = wextend('addcol', dwt_pad_type, approx_hp2_ds_oversampel,fl);
+approx_lp_ds1_row_pad = wextend('addrow', dwt_pad_type, approx_lp1_ds_oversampel,fl);
+approx_lp_ds2_row_pad = wextend('addrow', dwt_pad_type, approx_lp2_ds_oversampel,fl);
+approx_hp_ds1_row_pad = wextend('addrow', dwt_pad_type, approx_hp1_ds_oversampel,fl);
+approx_hp_ds2_row_pad = wextend('addrow', dwt_pad_type, approx_hp2_ds_oversampel,fl);
 
 % convlove with low pass and hight pass filters
-approx_lp1_lp1_conv1 = conv2(approx_lp_ds1_row_pad, H_lpf1(:)', conv_type);
-approx_lp1_hp1_conv1 = conv2(approx_lp_ds1_row_pad, G_hpf1(:)', conv_type);
-approx_hp1_lp1_conv1 = conv2(approx_hp_ds1_row_pad, H_lpf1(:)', conv_type);
-approx_hp1_hp1_conv1 = conv2(approx_hp_ds1_row_pad, G_hpf1(:)', conv_type);
+approx_lp1_lp1_conv1 = conv2(approx_lp_ds1_row_pad, H_lpf1(:), conv_type);
+approx_lp1_hp1_conv1 = conv2(approx_lp_ds1_row_pad, G_hpf1(:), conv_type);
+approx_hp1_lp1_conv1 = conv2(approx_hp_ds1_row_pad, H_lpf1(:), conv_type);
+approx_hp1_hp1_conv1 = conv2(approx_hp_ds1_row_pad, G_hpf1(:), conv_type);
 
-approx_lp2_lp2_conv1 = conv2(approx_lp_ds2_row_pad, H_lpf2(:)', conv_type);
-approx_lp2_hp2_conv1 = conv2(approx_lp_ds2_row_pad, G_hpf2(:)', conv_type);
-approx_hp2_lp2_conv1 = conv2(approx_hp_ds2_row_pad, H_lpf2(:)', conv_type);
-approx_hp2_hp2_conv1 = conv2(approx_hp_ds2_row_pad, G_hpf2(:)', conv_type);
+approx_lp2_lp2_conv1 = conv2(approx_lp_ds2_row_pad, H_lpf2(:), conv_type);
+approx_lp2_hp2_conv1 = conv2(approx_lp_ds2_row_pad, G_hpf2(:), conv_type);
+approx_hp2_lp2_conv1 = conv2(approx_hp_ds2_row_pad, H_lpf2(:), conv_type);
+approx_hp2_hp2_conv1 = conv2(approx_hp_ds2_row_pad, G_hpf2(:), conv_type);
 
 [h_padd_os, w_padd_os] = size(approx_lp1_lp1_conv1);
 
@@ -143,5 +154,10 @@ HH2 = approx_hp2_hp2_conv1(1:2:w_padd_os,:);
 H2H1 = HH2(1:2:end,fl:2:end-fl-1);
 H2H2 = HH2(2:2:end,fl+1:2:end-fl);
 
+LL = [[L1L1 L1L2];[L2L1 L2L2]];
+LH = [[L1H1 L1H2];[L2H1 L2H2]];
+HL = [[H1L1 H1L2];[H2L1 H2L2]];
+HH = [[H1H1 H1H2];[H2H1 H2H2]];
 
+b = [[LL, LH];[HL,HH]];
 end
