@@ -47,7 +47,7 @@ def roll_pad(data, pad_len):
     return data_roll_pad
 
 
-def fir_down_sample(data, fir):
+def fir_down_sample(data, fir, start=0):
     # input tensors rank 4
 
     data_tr = tf.transpose(data, perm=[0, 2, 1, 3])
@@ -57,7 +57,7 @@ def fir_down_sample(data, fir):
     conv_tr = tf.transpose(conv, perm=[0, 2, 1, 3])
 
     # down sample
-    lo_conv_ds = conv_tr[:, 0:conv_tr.shape[1]:2, :, :]
+    lo_conv_ds = conv_tr[:, start:conv_tr.shape[1]:2, :, :]
     return lo_conv_ds
 
 
@@ -135,6 +135,19 @@ def up_sample_fir(x, fir):
         stack_rows, fir, padding='SAME', strides=[1, 1, 1, 1],
     )
     res = tf.transpose(conv, perm=[0, 2, 1, 3])
+    return res
+
+
+def over_sample_rows(x):
+    # create zero like tensor
+    x = tf.transpose(x, perm=[0, 2, 1, 3])
+    x_sqrt = x*(1/math.sqrt(2))
+    # stack both tensors
+    stack_rows = tf.stack([x, x_sqrt], axis=3)
+    # reshape for zero insertion between the rows
+    stack_rows = tf.reshape(stack_rows, shape=[-1, x.shape[1], x.shape[2]*2, x.shape[3]])
+
+    res = tf.transpose(stack_rows, perm=[0, 2, 1, 3])
     return res
 
 

@@ -70,7 +70,6 @@ class DTCWT(layers.Layer):
             w_c[j][1][0] = tf.concat([tf.concat([w_c[j+1][1][0], w_c[j][1][0][0]], axis=2), tf.concat([w_c[j][1][0][1], w_c[j][1][0][2]], axis=2)], axis=1)
             w_c[j][1][1] = tf.concat([tf.concat([w_c[j+1][1][1], w_c[j][1][1][0]], axis=2), tf.concat([w_c[j][1][1][1], w_c[j][1][1][2]], axis=2)], axis=1)
 
-
         w_0 = tf.concat([tf.concat([w_c[j][0][0], w_c[0][0][0][0]], axis=2), tf.concat([w_c[0][0][0][1], w_c[0][0][0][2]], axis=2)], axis=1)
         w_1 = tf.concat([tf.concat([w_c[j][0][1], w_c[0][0][1][0]], axis=2), tf.concat([w_c[0][0][1][1], w_c[0][0][1][2]], axis=2)], axis=1)
         w_2 = tf.concat([tf.concat([w_c[j][1][0], w_c[0][1][0][0]], axis=2), tf.concat([w_c[0][1][0][1], w_c[0][1][0][2]], axis=2)], axis=1)
@@ -137,7 +136,7 @@ class IDTCWT(layers.Layer):
 
 
 if __name__ == "__main__":
-    img = cv2.imread("../input/Lenna_orig.png", 1)
+    img = cv2.imread("../input/Lenna_orig.png", 0)
     img_ex1 = np.expand_dims(img, axis=0)
     #
     if len(img_ex1.shape) <= 3:
@@ -148,15 +147,15 @@ if __name__ == "__main__":
 
     cplx_input = layers.Input(shape=(h, w, c))
     x = DTCWT(2)(cplx_input)
-    x = IDTCWT(2)(x)
+    # x = IDTCWT(2)(x)
     model = Model(cplx_input, x, name="mymodel")
     model.summary()
 
     out = model.predict(img_ex1)
-    diff = np.max(out[0] - img)
-    print("diff is", diff)
+    # diff = np.max(out[0] - img)
+    # print("diff is", diff)
     cv2.imshow("orig", out[0].astype('uint8'))
-    cv2.imshow("reconstructed", img.astype('uint8'))
+    # cv2.imshow("reconstructed", img.astype('uint8'))
     cv2.waitKey(0)
     # x = layers.Conv2D(32, (3, 3), activation="relu",padding='same')(x)
     # x = layers.Dropout(0.5)(x)
