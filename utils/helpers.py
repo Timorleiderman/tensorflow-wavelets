@@ -47,7 +47,7 @@ def roll_pad(data, pad_len):
     return data_roll_pad
 
 
-def fir_down_sample(data, fir, start=0):
+def fir_down_sample(data, fir, start=0, step=2):
     # input tensors rank 4
 
     data_tr = tf.transpose(data, perm=[0, 2, 1, 3])
@@ -57,7 +57,7 @@ def fir_down_sample(data, fir, start=0):
     conv_tr = tf.transpose(conv, perm=[0, 2, 1, 3])
 
     # down sample
-    lo_conv_ds = conv_tr[:, start:conv_tr.shape[1]:2, :, :]
+    lo_conv_ds = conv_tr[:, start:conv_tr.shape[1]:step, :, :]
     return lo_conv_ds
 
 
