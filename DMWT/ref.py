@@ -4,7 +4,7 @@ import cv2
 import tensorflow as tf
 from utils import filters
 from utils.helpers import over_sample_rows
-from utils.cast import tf_to_ndarray
+from utils.cast import tf_to_ndarray, cast_like_matlab_uint8_2d
 from utils.helpers import *
 
 
@@ -48,21 +48,52 @@ def analysis_filter_bank2d_ghm(x):
     hp2_ds1_os_pad = tf.pad(hp2_ds1_os,[[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT',constant_values=0)
 
     lp1_lp1_ds = fir_down_sample(lp1_ds1_os_pad, lp1, start=filt_len-2, step=4)
-    lp1_hp1_ds = fir_down_sample(lp2_ds1_os_pad, hp1, start=filt_len-2, step=4)
+    lp1_hp1_ds = fir_down_sample(lp1_ds1_os_pad, hp1, start=filt_len-2, step=4)
     hp1_lp1_ds = fir_down_sample(hp1_ds1_os_pad, lp1, start=filt_len-2, step=4)
-    hp1_hp1_ds = fir_down_sample(hp2_ds1_os_pad, hp1, start=filt_len-2, step=4)
+    hp1_hp1_ds = fir_down_sample(hp1_ds1_os_pad, hp1, start=filt_len-2, step=4)
 
     lp1_lp1_tr = tf.transpose(lp1_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
     lp1_hp1_tr = tf.transpose(lp1_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
     hp1_lp1_tr = tf.transpose(hp1_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
     hp1_hp1_tr = tf.transpose(hp1_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
 
-    aaalp1_lp1_ds =tf_to_ndarray(lp1_lp1_tr)
-    aaalp1_hp1_ds =tf_to_ndarray(lp1_hp1_tr)
-    aaahp1_lp1_ds =tf_to_ndarray(hp1_lp1_tr)
-    aaahp1_hp1_ds =tf_to_ndarray(hp1_hp1_tr)
+    lp1_lp2_ds = fir_down_sample(lp1_ds1_os_pad, lp2, start=filt_len-2, step=4)
+    lp1_hp2_ds = fir_down_sample(lp1_ds1_os_pad, hp2, start=filt_len-2, step=4)
+    hp1_lp2_ds = fir_down_sample(hp1_ds1_os_pad, lp2, start=filt_len-2, step=4)
+    hp1_hp2_ds = fir_down_sample(hp1_ds1_os_pad, hp2, start=filt_len-2, step=4)
 
-    print("hello")
+    lp1_lp2_tr = tf.transpose(lp1_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp1_hp2_tr = tf.transpose(lp1_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    hp1_lp2_tr = tf.transpose(hp1_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    hp1_hp2_tr = tf.transpose(hp1_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+
+    lp2_lp1_ds = fir_down_sample(lp2_ds1_os_pad, lp1, start=filt_len-2, step=4)
+    lp2_hp1_ds = fir_down_sample(lp2_ds1_os_pad, hp1, start=filt_len-2, step=4)
+    hp2_lp1_ds = fir_down_sample(hp2_ds1_os_pad, lp1, start=filt_len-2, step=4)
+    hp2_hp1_ds = fir_down_sample(hp2_ds1_os_pad, hp1, start=filt_len-2, step=4)
+
+    lp2_lp1_tr = tf.transpose(lp2_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp2_hp1_tr = tf.transpose(lp2_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
+    hp2_lp1_tr = tf.transpose(hp2_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
+    hp2_hp1_tr = tf.transpose(hp2_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
+
+    lp2_lp2_ds = fir_down_sample(lp2_ds1_os_pad, lp2, start=filt_len-2, step=4)
+    lp2_hp2_ds = fir_down_sample(lp2_ds1_os_pad, hp2, start=filt_len-2, step=4)
+    hp2_lp2_ds = fir_down_sample(hp2_ds1_os_pad, lp2, start=filt_len-2, step=4)
+    hp2_hp2_ds = fir_down_sample(hp2_ds1_os_pad, hp2, start=filt_len-2, step=4)
+
+    lp2_lp2_tr = tf.transpose(lp2_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp2_hp2_tr = tf.transpose(lp2_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    hp2_lp2_tr = tf.transpose(hp2_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    hp2_hp2_tr = tf.transpose(hp2_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+
+    ll = tf.concat([tf.concat([lp1_lp1_tr, lp1_lp2_tr], axis=2), tf.concat([lp2_lp1_tr, lp2_lp2_tr], axis=2)], axis=1)
+    lh = tf.concat([tf.concat([lp1_hp1_tr, lp1_hp2_tr], axis=2), tf.concat([lp2_hp1_tr, lp2_hp2_tr], axis=2)], axis=1)
+    hl = tf.concat([tf.concat([hp1_lp1_tr, hp1_lp2_tr], axis=2), tf.concat([hp2_lp1_tr, hp2_lp2_tr], axis=2)], axis=1)
+    hh = tf.concat([tf.concat([hp1_hp1_tr, hp1_hp2_tr], axis=2), tf.concat([hp2_hp1_tr, hp2_hp2_tr], axis=2)], axis=1)
+
+    res = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
+    return res
 
 
 
