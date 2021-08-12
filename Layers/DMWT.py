@@ -34,7 +34,17 @@ class DMWT(layers.Layer):
 
         # oversample
         res = analysis_filter_bank2d_ghm(inputs, self.lp1, self.lp2, self.hp1, self.hp2)
+        # res = [[lp1_lp1_tr, lp1_hp1_tr,hp1_lp1_tr, hp1_hp1_tr],
+        #        [lp1_lp2_tr, lp1_hp2_tr,hp1_lp2_tr, hp1_hp2_tr],
+        #        [lp2_lp1_tr, lp2_hp1_tr,hp2_lp1_tr, hp2_hp1_tr],
+        #        [lp2_lp2_tr, lp2_hp2_tr,hp2_lp2_tr, hp2_hp2_tr],
+        #        ]
+        ll = tf.concat([tf.concat([res[0][0], res[1][0]], axis=2), tf.concat([res[2][0], res[3][0]], axis=2)], axis=1)
+        lh = tf.concat([tf.concat([res[0][1], res[1][1]], axis=2), tf.concat([res[2][1], res[3][1]], axis=2)], axis=1)
+        hl = tf.concat([tf.concat([res[0][2], res[1][2]], axis=2), tf.concat([res[2][2], res[3][2]], axis=2)], axis=1)
+        hh = tf.concat([tf.concat([res[0][3], res[1][3]], axis=2), tf.concat([res[2][3], res[3][3]], axis=2)], axis=1)
 
+        res = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
         return res
 
 

@@ -340,10 +340,9 @@ def analysis_filter_bank2d_ghm(x, lp1, lp2, hp1, hp2):
     hp2_lp2_tr = tf.transpose(hp2_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
     hp2_hp2_tr = tf.transpose(hp2_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
 
-    ll = tf.concat([tf.concat([lp1_lp1_tr, lp1_lp2_tr], axis=2), tf.concat([lp2_lp1_tr, lp2_lp2_tr], axis=2)], axis=1)
-    lh = tf.concat([tf.concat([lp1_hp1_tr, lp1_hp2_tr], axis=2), tf.concat([lp2_hp1_tr, lp2_hp2_tr], axis=2)], axis=1)
-    hl = tf.concat([tf.concat([hp1_lp1_tr, hp1_lp2_tr], axis=2), tf.concat([hp2_lp1_tr, hp2_lp2_tr], axis=2)], axis=1)
-    hh = tf.concat([tf.concat([hp1_hp1_tr, hp1_hp2_tr], axis=2), tf.concat([hp2_hp1_tr, hp2_hp2_tr], axis=2)], axis=1)
-
-    res = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
+    res = [[lp1_lp1_tr, lp1_hp1_tr,hp1_lp1_tr, hp1_hp1_tr],
+           [lp1_lp2_tr, lp1_hp2_tr,hp1_lp2_tr, hp1_hp2_tr],
+           [lp2_lp1_tr, lp2_hp1_tr,hp2_lp1_tr, hp2_hp1_tr],
+           [lp2_lp2_tr, lp2_hp2_tr,hp2_lp2_tr, hp2_hp2_tr],
+           ]
     return res
