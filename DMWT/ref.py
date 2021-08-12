@@ -8,6 +8,24 @@ from utils.cast import tf_to_ndarray, cast_like_matlab_uint8_2d
 from utils.helpers import *
 
 
+def synthesis_filter_bank2d_ghm(x):
+    h = int(x.shape[1])//2
+    w = int(x.shape[2])//2
+
+    ghm_fir = filters.ghm()
+    lp1, lp2, hp1, hp2 = construct_tf_filter(ghm_fir[0], ghm_fir[1], ghm_fir[2], ghm_fir[3])
+    filt_len = int(lp1.shape[1])
+
+    ll = tf.split(tf.split(x, 2, axis=1)[0], 2, axis=2)[0]
+    lh = tf.split(tf.split(x, 2, axis=1)[0], 2, axis=2)[1]
+    hl = tf.split(tf.split(x, 2, axis=1)[1], 2, axis=2)[0]
+    hh = tf.split(tf.split(x, 2, axis=1)[1], 2, axis=2)[1]
+
+    cv2.imshow("test", cast_like_matlab_uint8_2d(tf_to_ndarray(ll)).astype('uint8'))
+    cv2.waitKey(0)
+    print("synth")
+
+
 def analysis_filter_bank2d_ghm(x):
     # parameters
     conv_type = 'same'
@@ -104,7 +122,18 @@ w, h = img_grey.shape
 x_f32 = tf.expand_dims(x_f32, axis=-1)
 x_f32 = tf.expand_dims(x_f32, axis=0)
 
-analysis_filter_bank2d_ghm(x_f32)
+res = analysis_filter_bank2d_ghm(x_f32)
+
+ll = tf.concat([tf.concat([res[0][0], res[1][0]], axis=2), tf.concat([res[2][0], res[3][0]], axis=2)], axis=1)
+lh = tf.concat([tf.concat([res[0][1], res[1][1]], axis=2), tf.concat([res[2][1], res[3][1]], axis=2)], axis=1)
+hl = tf.concat([tf.concat([res[0][2], res[1][2]], axis=2), tf.concat([res[2][2], res[3][2]], axis=2)], axis=1)
+hh = tf.concat([tf.concat([res[0][3], res[1][3]], axis=2), tf.concat([res[2][3], res[3][3]], axis=2)], axis=1)
+
+res = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
+
+# cv2.imshow("test", cast_like_matlab_uint8_2d(tf_to_ndarray(res)).astype('uint8'))
+# cv2.waitKey(0)
+synthesis_filter_bank2d_ghm(res)
 
 
 print("hey")
