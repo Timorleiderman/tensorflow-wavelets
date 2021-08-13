@@ -4,8 +4,15 @@ import math
 import tensorflow as tf
 
 
+def tf_1d_to_ndarray(data, datatype=tf.float64):
+
+    with tf.Session() as sess:
+        data = sess.run(data)
+    return data
+
+
 def tf_to_ndarray(data, datatype=tf.float64):
-    data = tf.image.convert_image_dtype(data[0, ..., 0], dtype=datatype)
+    data = tf.image.convert_image_dtype(data[0, ..., :], dtype=datatype)
     with tf.Session() as sess:
         data = sess.run(data)
     return data

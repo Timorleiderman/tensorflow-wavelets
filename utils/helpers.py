@@ -1,7 +1,10 @@
 
 import math
+
+import cv2
 import tensorflow as tf
 from utils import filters
+from utils.cast import *
 
 def reconstruct_w_level2(w):
     w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
@@ -122,6 +125,78 @@ def add_sub(a, b):
     return add, sub
 
 
+def incr(lst, i):
+    return [x+i for x in lst]
+
+
+def split_to_ll_lh_hl_hh(x):
+
+    x_split0 = tf.concat([x[:, 0::2, :, :], x[:, 1::2, :, :]], axis=1)
+    x_split0_tr = tf.transpose(x_split0, perm=[0, 2, 1, 3])
+    x_split = tf.concat([x_split0_tr[:, 0::2, :, :], x_split0_tr[:, 1::2, :, :]], axis=1)
+    res = tf.transpose(x_split, perm=[0, 2, 1, 3])
+    return res
+
+
+def permute_rows_4_2(x):
+    slice_x_rc0 = tf.split(x, 2, axis=1)[0]
+    slice_x_rc1 = tf.split(x, 2, axis=1)[1]
+
+    slice_x_rc0_ds0 = slice_x_rc0[:, 0::2, :, :]
+    slice_x_rc0_ds1 = slice_x_rc0[:, 1::2, :, :]
+    slice_x_rc1_ds0 = slice_x_rc1[:, 0::2, :, :]
+    slice_x_rc1_ds1 = slice_x_rc1[:, 1::2, :, :]
+
+    slice_x_rc0_ds0_tr = tf.transpose(slice_x_rc0_ds0, perm=[0, 2, 1, 3])
+    slice_x_rc0_ds1_tr = tf.transpose(slice_x_rc0_ds1, perm=[0, 2, 1, 3])
+    slice_x_rc1_ds0_tr = tf.transpose(slice_x_rc1_ds0, perm=[0, 2, 1, 3])
+    slice_x_rc1_ds1_tr = tf.transpose(slice_x_rc1_ds1, perm=[0, 2, 1, 3])
+    stack_x = tf.stack([slice_x_rc0_ds0_tr, slice_x_rc0_ds1_tr, slice_x_rc1_ds0_tr, slice_x_rc1_ds1_tr], axis=3)
+    # reshape for insertion between the rows
+    perm_cols = tf.reshape(stack_x, shape=[-1, slice_x_rc0_ds0_tr.shape[1], slice_x_rc0_ds0_tr.shape[2]*4, slice_x_rc0_ds0_tr.shape[3]])
+    res = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
+
+    return res
+
+
+def permute_rows_2_1(x):
+
+    x_ds1 = x[:, 0::4, :, :]
+    x_ds2 = x[:, 1::4, :, :]
+    x_ds3 = x[:, 2::4, :, :]
+    x_ds4 = x[:, 3::4, :, :]
+
+    x_ds1 = tf.transpose(x_ds1, perm=[0, 2, 1, 3])
+    x_ds2 = tf.transpose(x_ds2, perm=[0, 2, 1, 3])
+    x_ds3 = tf.transpose(x_ds3, perm=[0, 2, 1, 3])
+    x_ds4 = tf.transpose(x_ds4, perm=[0, 2, 1, 3])
+
+    stack_wx_ds12 = tf.stack([x_ds1, x_ds2], axis=3)
+    # reshape for insertion between the rows
+    wx_ds12 = tf.reshape(stack_wx_ds12, shape=[-1, x_ds1.shape[1], x_ds1.shape[2]*2, x_ds1.shape[3]])
+    stack_wx_ds34 = tf.stack([x_ds3, x_ds4], axis=3)
+    wx_ds34 = tf.reshape(stack_wx_ds34, shape=[-1, x_ds3.shape[1], x_ds3.shape[2]*2, x_ds3.shape[3]])
+    res = tf.concat([wx_ds12, wx_ds34], axis=2)
+    res = tf.transpose(res, perm=[0, 2, 1, 3])
+
+    return res
+
+
+def pad_fir(x, fir):
+
+    filt_len = fir.shape[1]
+    x_pad = tf.pad(x,
+                       [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]],
+                       mode='CONSTANT',
+                       constant_values=0)
+
+    res = tf.nn.conv2d(
+        x_pad, fir, padding='SAME', strides=[1, 1, 1, 1],
+    )
+
+    return res
+
+
 def up_sample_fir(x, fir):
     # create zero like tensor
     x = tf.transpose(x, perm=[0, 2, 1, 3])
@@ -135,6 +210,22 @@ def up_sample_fir(x, fir):
         stack_rows, fir, padding='SAME', strides=[1, 1, 1, 1],
     )
     res = tf.transpose(conv, perm=[0, 2, 1, 3])
+    return res
+
+
+def up_sample_4_1(x):
+
+    a = tf.split(x, 2, axis=2)[0]
+    b = tf.split(x, 2, axis=2)[1]
+    stack_a_b = tf.stack([a, b], axis=3)
+    us = tf.reshape(stack_a_b, shape=[-1, a.shape[1], a.shape[2]*2, a.shape[3]])
+    us_tr = tf.transpose(us, perm=[0,2,1,3])
+    us_l = tf.split(us_tr, 2, axis=2)[0]
+    us_r = tf.split(us_tr, 2, axis=2)[1]
+    stack_l_r = tf.stack([us_l, us_r], axis=3)
+    us_us = tf.reshape(stack_l_r, shape=[-1, us_l.shape[1], us_l.shape[2]*2, x.shape[3]])
+    res = tf.transpose(us_us, perm=[0,2,1,3])
+
     return res
 
 
@@ -346,3 +437,70 @@ def analysis_filter_bank2d_ghm(x, lp1, lp2, hp1, hp2):
            [lp2_lp2_tr, lp2_hp2_tr,hp2_lp2_tr, hp2_hp2_tr],
            ]
     return res
+
+
+def synthesis_filter_bank2d_ghm_mult(x, w_mat):
+
+    h = int(x.shape[1])//2
+    w = int(x.shape[2])//2
+
+    ll = tf.split(tf.split(x, 2, axis=1)[0], 2, axis=2)[0]
+    lh = tf.split(tf.split(x, 2, axis=1)[0], 2, axis=2)[1]
+    hl = tf.split(tf.split(x, 2, axis=1)[1], 2, axis=2)[0]
+    hh = tf.split(tf.split(x, 2, axis=1)[1], 2, axis=2)[1]
+
+    ll = up_sample_4_1(ll)
+    lh = up_sample_4_1(lh)
+    hl = up_sample_4_1(hl)
+    hh = up_sample_4_1(hh)
+
+    recon_1 = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
+    recon_1_tr = tf.transpose(recon_1, perm=[0, 2, 1, 3])
+
+    perm_cols = permute_rows_4_2(recon_1_tr)
+    cros_w_x = tf.matmul(w_mat, perm_cols[:, ..., 0])
+    cros_w_x = tf.expand_dims(cros_w_x, axis=-1)
+
+    cros_w_x_ds = cros_w_x[:, 0::2, :, :]
+    cros_w_x_ds_tr = tf.transpose(cros_w_x_ds, perm=[0, 2, 1, 3])
+    perm_rows = permute_rows_4_2(cros_w_x_ds_tr)
+
+    cross_w_perm_rows = tf.matmul(w_mat, perm_rows[:, ..., 0])
+    cross_w_perm_rows = tf.expand_dims(cross_w_perm_rows, axis=-1)
+
+    res = cross_w_perm_rows[:, 0::2, :, :]
+    return res
+
+
+def analysis_filter_bank2d_ghm_mult(x, w_mat):
+    # parameters
+    conv_type = 'same'
+    h = int(x.shape[1])
+    w = int(x.shape[2])
+
+    x_os = over_sample_rows(x)
+    cros_w_x = tf.matmul(w_mat, x_os[:,...,0])
+    cros_w_x = tf.expand_dims(cros_w_x, axis=-1)
+
+    perm_rows = permute_rows_2_1(cros_w_x)
+    perm_rows_tr = tf.transpose(perm_rows, perm=[0, 2, 1, 3])
+    perm_rows_os = over_sample_rows(perm_rows_tr)
+
+    z_w_x = tf.matmul(w_mat, perm_rows_os[:, ..., 0])
+    z_w_x = tf.expand_dims(z_w_x, axis=-1)
+    perm_cols = permute_rows_2_1(z_w_x)
+    perm_cols = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
+
+    ll = tf.split(tf.split(perm_cols, 2, axis=1)[0], 2, axis=2)[0]
+    lh = tf.split(tf.split(perm_cols, 2, axis=1)[0], 2, axis=2)[1]
+    hl = tf.split(tf.split(perm_cols, 2, axis=1)[1], 2, axis=2)[0]
+    hh = tf.split(tf.split(perm_cols, 2, axis=1)[1], 2, axis=2)[1]
+
+    ll = split_to_ll_lh_hl_hh(ll)
+    lh = split_to_ll_lh_hl_hh(lh)
+    hl = split_to_ll_lh_hl_hh(hl)
+    hh = split_to_ll_lh_hl_hh(hh)
+
+    res = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
+    return res
+
