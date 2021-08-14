@@ -200,6 +200,7 @@ def permute_rows_2_1(x):
     # reshape for insertion between the rows
     wx_ds12 = tf.reshape(stack_wx_ds12, shape=[-1, x_ds1.shape[1], x_ds1.shape[2]*2, x_ds1.shape[3]])
     stack_wx_ds34 = tf.stack([x_ds3, x_ds4], axis=3)
+
     wx_ds34 = tf.reshape(stack_wx_ds34, shape=[-1, x_ds3.shape[1], x_ds3.shape[2]*2, x_ds3.shape[3]])
     res = tf.concat([wx_ds12, wx_ds34], axis=2)
     res = tf.transpose(res, perm=[0, 2, 1, 3])
@@ -484,13 +485,13 @@ def synthesis_filter_bank2d_ghm_mult(x, w_mat):
 
     perm_cols = permute_rows_4_2(recon_1_tr)
 
-    cros_w_x = tf.einsum('bijc,bjkc->bikc', w_mat, perm_cols)
+    cros_w_x = tf.einsum('fijc,bjkc->bikc', w_mat, perm_cols)
 
     cros_w_x_ds = cros_w_x[:, 0::2, :, :]
     cros_w_x_ds_tr = tf.transpose(cros_w_x_ds, perm=[0, 2, 1, 3])
     perm_rows = permute_rows_4_2(cros_w_x_ds_tr)
 
-    cross_w_perm_rows = tf.einsum('bijc,bjkc->bikc', w_mat, perm_rows)
+    cross_w_perm_rows = tf.einsum('fijc,bjkc->bikc', w_mat, perm_rows)
 
     res = cross_w_perm_rows[:, 0::2, :, :]
     return res
@@ -499,14 +500,14 @@ def synthesis_filter_bank2d_ghm_mult(x, w_mat):
 def analysis_filter_bank2d_ghm_mult(x, w_mat):
     # parameters
     x_os = over_sample_rows(x)
+    cros_w_x = tf.einsum('fijc,bjkc->bikc', w_mat, x_os)
 
-    cros_w_x = tf.einsum('bijc,bjkc->bikc', w_mat, x_os)
-
+    # cros_w_x = tf.matmul(w_mat, x_os)
     perm_rows = permute_rows_2_1(cros_w_x)
     perm_rows_tr = tf.transpose(perm_rows, perm=[0, 2, 1, 3])
     perm_rows_os = over_sample_rows(perm_rows_tr)
 
-    z_w_x = tf.einsum('bijc,bjkc->bikc', w_mat, perm_rows_os)
+    z_w_x = tf.einsum('fijc,bjkc->bikc', w_mat, perm_rows_os)
     perm_cols = permute_rows_2_1(z_w_x)
     perm_cols = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
 

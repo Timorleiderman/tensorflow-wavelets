@@ -22,7 +22,7 @@ class DMWT(layers.Layer):
     def build(self, input_shape):
         h = int(input_shape[1])
         w = int(input_shape[2])
-        w_mat = filters.ghm_w_mat(h,w)
+        w_mat = filters.ghm_w_mat(h, w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
         w_mat = tf.expand_dims(w_mat, axis=0)
         self.w_mat = tf.expand_dims(w_mat, axis=-1)
@@ -30,7 +30,6 @@ class DMWT(layers.Layer):
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
-
         res = analysis_filter_bank2d_ghm_mult(inputs, self.w_mat)
         return res
 
@@ -45,12 +44,12 @@ class IDMWT(layers.Layer):
     def build(self, input_shape):
         h = int(input_shape[1])//2
         w = int(input_shape[2])//2
-        w_mat = filters.ghm_w_mat(h,w)
+        w_mat = filters.ghm_w_mat(h, w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
-        w_mat = tf.expand_dims(w_mat, axis=0)
+        w_mat = tf.transpose(w_mat, perm=[1, 0])
         w_mat = tf.expand_dims(w_mat, axis=-1)
-        self.w_mat = tf.transpose(w_mat, perm=[0, 2, 1, 3])
-
+        self.w_mat = tf.expand_dims(w_mat, axis=0)
+        print(self.w_mat.shape)
         if input_shape[-1] != 1:
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
@@ -62,26 +61,50 @@ class IDMWT(layers.Layer):
 
 
 if __name__ == "__main__":
+    pass
     # img = cv2.imread("../input/LennaGrey.png", 0)
     # img_ex1 = np.expand_dims(img, axis=0)
     # #
     # if len(img_ex1.shape) <= 3:
     #     img_ex1 = np.expand_dims(img_ex1, axis=-1)
     #
+    #
     # _, h, w, c = img_ex1.shape
     # x_inp = layers.Input(shape=(h, w, c))
     # x = DMWT()(x_inp)
     # model = Model(x_inp, x, name="mymodel")
     # model.summary()
+    #
     # out = model.predict(img_ex1)
-
+    #
     # out_l = tf_rgb_to_ndarray(out)
     # out1 = cast_like_matlab_uint8_2d_rgb(out_l)
     # cv2.imshow("orig", out1.astype('uint8'))
     # cv2.waitKey(0)
-
-    x_inp = layers.Input(shape=(28, 28, 1))
-    x = DMWT()(x_inp)
-    x = IDMWT()(x)
-    model = Model(x_inp, x, name="mymodel")
-    model.summary()
+    #
+    # x_inp = layers.Input(shape=(28, 28, 1))
+    # x = DMWT()(x_inp)
+    # # x = IDMWT()(x)
+    # x = layers.Flatten()(x)
+    # x = layers.Dense(10, activation="softmax")(x)
+    #
+    # model = Model(x_inp, x, name="mymodel")
+    # model.summary()
+    # optimizer = SGD(lr=1e-4, momentum=0.9)
+    # model.compile(loss="categorical_crossentropy",
+    #               optimizer=optimizer, metrics=["accuracy"])
+    # (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    #
+    # y_train = to_categorical(y_train)
+    # y_test = to_categorical(y_test)
+    # x_train = x_train.astype('float32') / 255.0
+    # x_train = np.expand_dims(x_train, axis=-1)
+    #
+    # x_test = x_test.astype('float32') / 255.0
+    # x_test = np.expand_dims(x_test, axis=-1)
+    # history = model.fit(x_train, y_train,
+    #                     validation_split=0.2,
+    #                     epochs=40,
+    #                     batch_size=32,
+    #                     verbose=2,
+    #                     )
