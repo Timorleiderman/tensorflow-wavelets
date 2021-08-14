@@ -16,14 +16,14 @@ from tensorflow.keras.utils import to_categorical
 
 
 class DMWT(layers.Layer):
-    def __init__(self, name='ghm', **kwargs):
+    def __init__(self, wave_name='ghm', **kwargs):
         super(DMWT, self).__init__(**kwargs)
-        self.name = name.lower()
+        self.wave_name = wave_name.lower()
 
     def build(self, input_shape):
         h = int(input_shape[1])
         w = int(input_shape[2])
-        if self.name == 'dd2':
+        if self.wave_name == 'dd2':
             w_mat = filters.dd2(h, w)
         else:
             w_mat = filters.ghm_w_mat(h, w)
@@ -34,7 +34,7 @@ class DMWT(layers.Layer):
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
-        if self.name == 'dd2':
+        if self.wave_name == 'dd2':
             res = analysis_filter_bank2d_dd2_mult(inputs, self.w_mat)
         else:
             res = analysis_filter_bank2d_ghm_mult(inputs, self.w_mat)
@@ -44,13 +44,14 @@ class DMWT(layers.Layer):
 # Inverse Discrete MultiWavelet transform Layer
 
 class IDMWT(layers.Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, wave_name='ghm', **kwargs):
         super(IDMWT, self).__init__(**kwargs)
+        self.wave_name = wave_name
 
     def build(self, input_shape):
         h = int(input_shape[1])//2
         w = int(input_shape[2])//2
-        if self.name == 'dd2':
+        if self.wave_name == 'dd2':
             w_mat = filters.dd2(h, w)
         else:
             w_mat = filters.ghm_w_mat(h, w)
@@ -63,7 +64,7 @@ class IDMWT(layers.Layer):
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
-        if self.name == 'dd2':
+        if self.wave_name == 'dd2':
             res = synthesis_filter_bank2d_dd2_mult(inputs, self.w_mat)
         else:
             res = synthesis_filter_bank2d_ghm_mult(inputs, self.w_mat)
