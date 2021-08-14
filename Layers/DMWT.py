@@ -19,14 +19,13 @@ class DMWT(layers.Layer):
     def __init__(self, **kwargs):
         super(DMWT, self).__init__(**kwargs)
 
-        self.conv_type = "SAME"
-        self.border_padd = "SYMMETRIC"
-        w_mat = filters.ghm_w_mat()
+    def build(self, input_shape):
+        h = int(input_shape[1])
+        w = int(input_shape[2])
+        w_mat = filters.ghm_w_mat(h,w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
         w_mat = tf.expand_dims(w_mat, axis=0)
         self.w_mat = tf.expand_dims(w_mat, axis=-1)
-
-    def build(self, input_shape):
         if input_shape[-1] != 1:
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
@@ -43,13 +42,15 @@ class IDMWT(layers.Layer):
     def __init__(self, **kwargs):
         super(IDMWT, self).__init__(**kwargs)
 
-        w_mat = filters.ghm_w_mat()
+    def build(self, input_shape):
+        h = int(input_shape[1])//2
+        w = int(input_shape[2])//2
+        w_mat = filters.ghm_w_mat(h,w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
         w_mat = tf.expand_dims(w_mat, axis=0)
         w_mat = tf.expand_dims(w_mat, axis=-1)
         self.w_mat = tf.transpose(w_mat, perm=[0, 2, 1, 3])
 
-    def build(self, input_shape):
         if input_shape[-1] != 1:
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
@@ -61,21 +62,26 @@ class IDMWT(layers.Layer):
 
 
 if __name__ == "__main__":
-    img = cv2.imread("../input/Lenna_orig.png", 1)
-    img_ex1 = np.expand_dims(img, axis=0)
+    # img = cv2.imread("../input/LennaGrey.png", 0)
+    # img_ex1 = np.expand_dims(img, axis=0)
+    # #
+    # if len(img_ex1.shape) <= 3:
+    #     img_ex1 = np.expand_dims(img_ex1, axis=-1)
     #
-    if len(img_ex1.shape) <= 3:
-        img_ex1 = np.expand_dims(img_ex1, axis=-1)
+    # _, h, w, c = img_ex1.shape
+    # x_inp = layers.Input(shape=(h, w, c))
+    # x = DMWT()(x_inp)
+    # model = Model(x_inp, x, name="mymodel")
+    # model.summary()
+    # out = model.predict(img_ex1)
 
-    _, h, w, c = img_ex1.shape
-    x_inp = layers.Input(shape=(h, w, c))
+    # out_l = tf_rgb_to_ndarray(out)
+    # out1 = cast_like_matlab_uint8_2d_rgb(out_l)
+    # cv2.imshow("orig", out1.astype('uint8'))
+    # cv2.waitKey(0)
+
+    x_inp = layers.Input(shape=(28, 28, 1))
     x = DMWT()(x_inp)
     x = IDMWT()(x)
     model = Model(x_inp, x, name="mymodel")
     model.summary()
-    out = model.predict(img_ex1)
-
-    out_l = tf_rgb_to_ndarray(out)
-    out1 = cast_like_matlab_uint8_2d_rgb(out_l)
-    cv2.imshow("orig", out1.astype('uint8'))
-    cv2.waitKey(0)
