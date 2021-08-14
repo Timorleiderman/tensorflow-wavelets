@@ -2,7 +2,7 @@
 clear
 %x = rand(256);
 x = imread('../../../input/LennaGrey.png');
-J = 5;
+J = 3;
 [Faf, Fsf] = FSfarras;
 [af, sf] = dualfilt1;
 

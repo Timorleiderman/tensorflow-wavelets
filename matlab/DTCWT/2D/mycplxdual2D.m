@@ -30,4 +30,5 @@ for j = 1:J
             w{j}{2}{1}{m} = (a - b)/sqrt(2);
     end
 end
+end
 

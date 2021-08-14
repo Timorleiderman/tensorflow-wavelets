@@ -108,7 +108,7 @@ class IDTCWT(layers.Layer):
 
     def call(self, inputs, training=None, mask=None):
 
-        w_rec = reconstruct_w_level2(inputs)
+        w_rec = reconstruct_w_leveln(inputs, self.level)
 
         height = int(w_rec[0][0][0][0].shape[1]*2)
         width = int(w_rec[0][0][0][0].shape[2]*2)
