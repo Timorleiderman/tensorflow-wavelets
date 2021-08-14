@@ -61,13 +61,14 @@ def analysis_filter_bank2d_ghm_mult(x):
     w_mat_tf = tf.constant(w_mat, dtype=tf.float32)
     w_mat_tf = tf.expand_dims(w_mat_tf, axis=-1)
     w_mat_tf = tf.expand_dims(w_mat_tf, axis=0)
-    w_mat_tf = tf.repeat(w_mat_tf, 3, axis=-1)
+    # w_mat_tf = tf.repeat(w_mat_tf, 3, axis=-1)
 
     x_os = over_sample_rows(x)
 
-    cros_w_x = tf.einsum('bijw,bjkw->bikw', w_mat_tf, x_os)
-    #cros_w_x = tf.expand_dims(cros_w_x, axis=-1)
-
+    # cros_w_x = tf.matmul(w_mat_tf, x_os[:, ..., 0])
+    cros_w_x = tf.einsum('bijc,bjkc->bikc', w_mat_tf, x_os)
+    # cros_w_x = tf.expand_dims(cros_w_x, axis=-1)
+    aaa = tf_to_ndarray(cros_w_x)
 
     perm_rows = permute_rows_2_1(cros_w_x)
     perm_rows_tr = tf.transpose(perm_rows, perm=[0, 2, 1, 3])
@@ -180,20 +181,29 @@ def analysis_filter_bank2d_ghm(x):
     return res
 
 
-img_grey = cv2.imread("../input/Lenna_orig.png", 1)
+img_grey = cv2.imread("../input/LennaGrey.png", 0)
 
 x_f32 = tf.cast(img_grey, dtype=tf.float32)
-w, h, c = img_grey.shape
-# x_f32 = tf.expand_dims(x_f32, axis=-1)
+w, h = img_grey.shape
+x_f32 = tf.expand_dims(x_f32, axis=-1)
 x_f32 = tf.expand_dims(x_f32, axis=0)
 
 
 decomp = analysis_filter_bank2d_ghm_mult(x_f32)
+
+recon_img = tf_to_ndarray(decomp)
+recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+cv2.imshow("test", recon_img_u8)
+cv2.waitKey(0)
+
 recon = synthesis_filter_bank2d_ghm_mult(decomp)
+
 recon_img = tf_to_ndarray(recon)
+recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+cv2.imshow("test", recon_img_u8)
+cv2.waitKey(0)
 
-
-print(mse(img_grey, recon_img))
+# print(mse(img_grey, recon_img))
 
 # ll = tf.concat([tf.concat([res[0][0], res[1][0]], axis=2), tf.concat([res[2][0], res[3][0]], axis=2)], axis=1)
 # lh = tf.concat([tf.concat([res[0][1], res[1][1]], axis=2), tf.concat([res[2][1], res[3][1]], axis=2)], axis=1)

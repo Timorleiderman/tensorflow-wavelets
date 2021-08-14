@@ -458,15 +458,14 @@ def synthesis_filter_bank2d_ghm_mult(x, w_mat):
     recon_1_tr = tf.transpose(recon_1, perm=[0, 2, 1, 3])
 
     perm_cols = permute_rows_4_2(recon_1_tr)
-    cros_w_x = tf.matmul(w_mat, perm_cols[:, ..., 0])
-    cros_w_x = tf.expand_dims(cros_w_x, axis=-1)
+
+    cros_w_x = tf.einsum('bijc,bjkc->bikc', w_mat, perm_cols)
 
     cros_w_x_ds = cros_w_x[:, 0::2, :, :]
     cros_w_x_ds_tr = tf.transpose(cros_w_x_ds, perm=[0, 2, 1, 3])
     perm_rows = permute_rows_4_2(cros_w_x_ds_tr)
 
-    cross_w_perm_rows = tf.matmul(w_mat, perm_rows[:, ..., 0])
-    cross_w_perm_rows = tf.expand_dims(cross_w_perm_rows, axis=-1)
+    cross_w_perm_rows = tf.einsum('bijc,bjkc->bikc', w_mat, perm_rows)
 
     res = cross_w_perm_rows[:, 0::2, :, :]
     return res
@@ -474,20 +473,15 @@ def synthesis_filter_bank2d_ghm_mult(x, w_mat):
 
 def analysis_filter_bank2d_ghm_mult(x, w_mat):
     # parameters
-    conv_type = 'same'
-    h = int(x.shape[1])
-    w = int(x.shape[2])
-
     x_os = over_sample_rows(x)
-    cros_w_x = tf.matmul(w_mat, x_os[:,...,0])
-    cros_w_x = tf.expand_dims(cros_w_x, axis=-1)
+
+    cros_w_x = tf.einsum('bijc,bjkc->bikc', w_mat, x_os)
 
     perm_rows = permute_rows_2_1(cros_w_x)
     perm_rows_tr = tf.transpose(perm_rows, perm=[0, 2, 1, 3])
     perm_rows_os = over_sample_rows(perm_rows_tr)
 
-    z_w_x = tf.matmul(w_mat, perm_rows_os[:, ..., 0])
-    z_w_x = tf.expand_dims(z_w_x, axis=-1)
+    z_w_x = tf.einsum('bijc,bjkc->bikc', w_mat, perm_rows_os)
     perm_cols = permute_rows_2_1(z_w_x)
     perm_cols = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
 
