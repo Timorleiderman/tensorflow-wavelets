@@ -252,6 +252,32 @@ def dualtreecplx2d(x, J, Faf, af):
     return w_1234
 
 
+def split_to_ll_lhhlhh(data):
+    split_0 = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)
+    split_1 = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)
+    lhhlhh = [split_0[1]] + split_1
+    ll = split_0[0]
+    return [ll,lhhlhh]
+
+
+def reconstruct_w_leveln(w, level):
+    w_rec = [[[[],[]] for x in range(2)] for i in range(level+1)]
+    ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
+    ws02 = tf.split(tf.split(w, 2, axis=1)[1], 2, axis=2)
+    w_split = [ws01]+[ws02]
+
+    for m in range(2):
+        for n in range(2):
+            [lo, lhhlhh] = split_to_ll_lhhlhh(w_split[m][n])
+            w_rec[0][m][n] = lhhlhh
+            for j in range(1, level):
+                [lo, lhhlhh] = split_to_ll_lhhlhh(lo)
+                w_rec[j][m][n] = lhhlhh
+            w_rec[j+1][m][n] = lo
+
+    return w_rec
+
+
 def reconstruct_w_level2(w):
     w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
 
@@ -275,7 +301,7 @@ def reconstruct_w_level2(w):
 
 def idualtreecplx2d(w, J, Fsf, sf):
 
-    w_rec = reconstruct_w_level2(w)
+    w_rec = reconstruct_w_leveln(w, J)
 
 
     # cd0[0] = w_split1[0][:, :128, 128:256, :]
@@ -359,14 +385,17 @@ else:
     x_f32 = tf.expand_dims(x_f32, axis=-1)
 
 x_f32 = tf.expand_dims(x_f32, axis=0)
-J = 2
+J = 3
 wc = dualtreecplx2d(x_f32, J, Faf, af)
+
 y = idualtreecplx2d(wc, J, Fsf, sf)
-print(y.shape)
+
+cv2.imshow("test1", tf_to_ndarray(y).astype("uint8"))
+cv2.waitKey(0)
 
 # debug_raw(w)
-cv2.imshow("test1", tf_to_ndarray(y).astype("uint8"))
 
-cv2.waitKey(0)
+
+
 print("yesyes")
 pass
