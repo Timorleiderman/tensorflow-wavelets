@@ -16,13 +16,17 @@ from tensorflow.keras.utils import to_categorical
 
 
 class DMWT(layers.Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, name='ghm', **kwargs):
         super(DMWT, self).__init__(**kwargs)
+        self.name = name.lower()
 
     def build(self, input_shape):
         h = int(input_shape[1])
         w = int(input_shape[2])
-        w_mat = filters.ghm_w_mat(h, w)
+        if self.name == 'dd2':
+            w_mat = filters.dd2(h, w)
+        else:
+            w_mat = filters.ghm_w_mat(h, w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
         w_mat = tf.expand_dims(w_mat, axis=0)
         self.w_mat = tf.expand_dims(w_mat, axis=-1)
@@ -30,12 +34,14 @@ class DMWT(layers.Layer):
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
-        res = analysis_filter_bank2d_ghm_mult(inputs, self.w_mat)
+        if self.name == 'dd2':
+            res = analysis_filter_bank2d_dd2_mult(inputs, self.w_mat)
+        else:
+            res = analysis_filter_bank2d_ghm_mult(inputs, self.w_mat)
         return res
 
 
 # Inverse Discrete MultiWavelet transform Layer
-
 
 class IDMWT(layers.Layer):
     def __init__(self, **kwargs):
@@ -44,7 +50,10 @@ class IDMWT(layers.Layer):
     def build(self, input_shape):
         h = int(input_shape[1])//2
         w = int(input_shape[2])//2
-        w_mat = filters.ghm_w_mat(h, w)
+        if self.name == 'dd2':
+            w_mat = filters.dd2(h, w)
+        else:
+            w_mat = filters.ghm_w_mat(h, w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
         w_mat = tf.transpose(w_mat, perm=[1, 0])
         w_mat = tf.expand_dims(w_mat, axis=-1)
@@ -54,8 +63,10 @@ class IDMWT(layers.Layer):
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
-
-        res = synthesis_filter_bank2d_ghm_mult(inputs, self.w_mat)
+        if self.name == 'dd2':
+            res = synthesis_filter_bank2d_dd2_mult(inputs, self.w_mat)
+        else:
+            res = synthesis_filter_bank2d_ghm_mult(inputs, self.w_mat)
 
         return res
 

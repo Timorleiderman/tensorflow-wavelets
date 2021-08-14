@@ -184,6 +184,26 @@ def permute_rows_4_2(x):
     return res
 
 
+def dd2_col_shuffel(x):
+    h = int(x.shape[1])//2
+    x_slic0 = x[:, 0:h, :, :]
+    x_slic1 = x[:, h:, :, :]
+
+    x_slic0_tr = tf.transpose(x_slic0, perm=[0, 2, 1, 3])
+    x_slic1_tr = tf.transpose(x_slic1, perm=[0, 2, 1, 3])
+    stack = tf.stack([x_slic0_tr, x_slic1_tr], axis=3)
+    perm_cols = tf.reshape(stack, shape=[-1, x_slic0_tr.shape[1], x_slic0_tr.shape[2]*2, x_slic0_tr.shape[3]])
+    res = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
+    return res
+
+
+def dd2_row_permutation(x):
+    x_even = x[:, 0::2, :, :]
+    x_odd = x[:, 1::2, :, :]
+
+    res = tf.concat([x_even,x_odd], axis=1)
+    return res
+
 def permute_rows_2_1(x):
 
     x_ds1 = x[:, 0::4, :, :]
@@ -524,3 +544,31 @@ def analysis_filter_bank2d_ghm_mult(x, w_mat):
     res = tf.concat([tf.concat([ll, lh], axis=2), tf.concat([hl, hh], axis=2)], axis=1)
     return res
 
+
+def analysis_filter_bank2d_dd2_mult(x, w_mat):
+    # parameters
+
+    cros_w_x = tf.einsum('fijc,bjkc->bikc', w_mat, x)
+
+    perm_rows = dd2_row_permutation(cros_w_x)
+    perm_rows_tr = tf.transpose(perm_rows, perm=[0, 2, 1, 3])
+
+    z_w_x = tf.einsum('fijc,bjkc->bikc', w_mat, perm_rows_tr)
+    perm_cols = dd2_row_permutation(z_w_x)
+
+    res = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
+    return res
+
+
+def synthesis_filter_bank2d_dd2_mult(x, w_mat):
+
+    x_tr = tf.transpose(x, perm=[0, 2, 1, 3])
+    x_col_shufl = dd2_col_shuffel(x_tr)
+
+    cros_w_x = tf.einsum('fijc,bjkc->bikc', w_mat, x_col_shufl)
+    cros_w_x_tr = tf.transpose(cros_w_x, perm=[0, 2, 1, 3])
+
+    x_row_shufl = dd2_col_shuffel(cros_w_x_tr)
+    res = tf.einsum('fijc,bjkc->bikc', w_mat, x_row_shufl)
+
+    return res

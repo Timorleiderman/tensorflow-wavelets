@@ -208,6 +208,7 @@ def ghm():
 
     return [h_filter[0], h_filter[1], g_filter[0], g_filter[1]]
 
+
 def ighm():
     h0 = [0,0.450000000000000,0.450000000000000,0.636396103067893,0.424264068711929,-0.0500000000000000,-0.0500000000000000,0.0707106781186548]
     h1 = [0, -0.212132034355964, -0.212132034355964, -0.300000000000000, 0.800000000000000, -0.212132034355964, -0.212132034355964, 0.300000000000000]
@@ -215,3 +216,23 @@ def ighm():
     g1 = [0, 0, 0, 0, 0, 0.707106781186548, -0.707106781186548, 0]
 
     return [h0,h1,g0,g1]
+
+
+def dd2(hight=512, width=512):
+    c0 = (1+math.sqrt(3))/(4*math.sqrt(2))
+    c1 = (3+math.sqrt(3))/(4*math.sqrt(2))
+    c2 = (3-math.sqrt(3))/(4*math.sqrt(2))
+    c3 = (1-math.sqrt(3))/(4*math.sqrt(2))
+
+    w = [c0, c1, c2, c3]
+    wi = [c3, -c2, c1, -c0]
+    w_mat = np.zeros((hight-2, width))
+    zeros_between = np.zeros((2, hight-4))
+    lat_box = np.concatenate([[w[2:],wi[2:]], zeros_between, [w[:2],wi[:2]]], axis=1)
+
+    for i in range((hight//2)-1):
+        w_mat[2*i:2*(i+1), 2*(i+1)-2:2*(i+1)+2] = [w]+[wi]
+
+    w_mat = np.concatenate([w_mat, lat_box], axis=0)
+    return w_mat
+

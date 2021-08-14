@@ -181,6 +181,7 @@ def analysis_filter_bank2d_ghm(x):
     return res
 
 
+
 img_grey = cv2.imread("../input/LennaGrey.png", 0)
 
 x_f32 = tf.cast(img_grey, dtype=tf.float32)
@@ -188,20 +189,33 @@ w, h = img_grey.shape
 x_f32 = tf.expand_dims(x_f32, axis=-1)
 x_f32 = tf.expand_dims(x_f32, axis=0)
 
+w_mat = filters.dd2(512, 512)
+w_mat = tf.constant(w_mat, dtype=tf.float32)
+w_mat = tf.expand_dims(w_mat, axis=0)
+w_mat = tf.expand_dims(w_mat, axis=-1)
+decom = analysis_filter_bank2d_dd2_mult(x_f32, w_mat)
 
-decomp = analysis_filter_bank2d_ghm_mult(x_f32)
-
-recon_img = tf_to_ndarray(decomp)
-recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
-cv2.imshow("test", recon_img_u8)
-cv2.waitKey(0)
-
-recon = synthesis_filter_bank2d_ghm_mult(decomp)
-
-recon_img = tf_to_ndarray(recon)
-recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
-cv2.imshow("test", recon_img_u8)
-cv2.waitKey(0)
+recon_img = tf_to_ndarray(decom)
+# recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+# cv2.imshow("test", recon_img_u8)
+# cv2.waitKey(0)
+w_mat = tf.transpose(w_mat, perm=[0, 2, 1, 3])
+recon = synthesis_filter_bank2d_dd2_mult(decom, w_mat)
+recon_img= tf_to_ndarray(recon)
+print(mse(img_grey, recon_img))
+# decomp = analysis_filter_bank2d_ghm_mult(x_f32)
+#
+# recon_img = tf_to_ndarray(decomp)
+# recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+# cv2.imshow("test", recon_img_u8)
+# cv2.waitKey(0)
+#
+# recon = synthesis_filter_bank2d_ghm_mult(decomp)
+#
+# recon_img = tf_to_ndarray(recon)
+# recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+# cv2.imshow("test", recon_img_u8)
+# cv2.waitKey(0)
 
 # print(mse(img_grey, recon_img))
 
@@ -215,6 +229,20 @@ cv2.waitKey(0)
 # # cv2.imshow("test", cast_like_matlab_uint8_2d(tf_to_ndarray(res)).astype('uint8'))
 # # cv2.waitKey(0)
 # synthesis_filter_bank2d_ghm(res)
+#
+# decomp = a(x_f32)
+#
+# recon_img = tf_to_ndarray(decomp)
+# recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+# cv2.imshow("test", recon_img_u8)
+# cv2.waitKey(0)
+#
+# recon = synthesis_filter_bank2d_ghm_mult(decomp)
+#
+# recon_img = tf_to_ndarray(recon)
+# recon_img_u8 = cast_like_matlab_uint8_2d(recon_img)
+# cv2.imshow("test", recon_img_u8)
+# cv2.waitKey(0)
 
 
 print("hey")
