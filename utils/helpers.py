@@ -6,9 +6,35 @@ import tensorflow as tf
 from utils import filters
 from utils.cast import *
 
+
+def split_to_ll_lhhlhh(data):
+    split_0 = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)
+    split_1 = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)
+    lhhlhh = [split_0[1]] + split_1
+    ll = split_0[0]
+    return [ll,lhhlhh]
+
+
+def reconstruct_w_leveln(w, level):
+    w_rec = [[[[],[]] for x in range(2)] for i in range(level+1)]
+    ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
+    ws02 = tf.split(tf.split(w, 2, axis=1)[1], 2, axis=2)
+    w_split = [ws01]+[ws02]
+
+    for m in range(2):
+        for n in range(2):
+            [lo, lhhlhh] = split_to_ll_lhhlhh(w_split[m][n])
+            w_rec[0][m][n] = lhhlhh
+            j = 1
+            for j in range(1, level):
+                [lo, lhhlhh] = split_to_ll_lhhlhh(lo)
+                w_rec[j][m][n] = lhhlhh
+            w_rec[j+1][m][n] = lo
+
+    return w_rec
+
 def reconstruct_w_level2(w):
     w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
-
     ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
     ws02 = tf.split(tf.split(w, 2, axis=1)[1], 2, axis=2)
     w_split = [ws01] + [ws02]
@@ -24,7 +50,6 @@ def reconstruct_w_level2(w):
             lh_hl_ll = [ll_lh[1]] + hl_hh
             w_rec[1][m][n] = lh_hl_ll
             w_rec[2][m][n] = ll
-
     return w_rec
 
 
