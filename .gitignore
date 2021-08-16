@@ -10,3 +10,4 @@ logs
 *.png
 output/*
 *.mat
+!input/LennaGrey.png
