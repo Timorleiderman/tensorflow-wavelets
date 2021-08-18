@@ -13,26 +13,34 @@ from tensorflow.keras.utils import to_categorical
 
 
 class DTCWT(layers.Layer):
+    """
+    Durel Tree Complex Wavelet Transform
+    Input: level - tree-level (int)
+    """
     def __init__(self, level=1, **kwargs):
         super(DTCWT, self).__init__(**kwargs)
 
         if level <= 1:
             level = 1
 
-        self.level = level
+        self.level = int(level)
         self.conv_type = "SAME"
         self.border_padd = "SYMMETRIC"
 
+        # Faf - First analysis filter - for the first level
+        # Fsf - First synthesis filter
         Faf, Fsf = filters.FSfarras()
         af, sf = filters.duelfilt()
 
+        # convert to tensor
         self.Faf = duel_filter_tf(Faf)
         self.Fsf = duel_filter_tf(Fsf)
         self.af = duel_filter_tf(af)
         self.sf = duel_filter_tf(sf)
 
     def build(self, input_shape):
-        if input_shape[-1] != 1:
+        # repeat last channel if input channel bigger then 1
+        if input_shape[-1] > 1:
             self.Faf = tf.repeat(self.Faf, input_shape[-1], axis=-1)
             self.Fsf = tf.repeat(self.Fsf, input_shape[-1], axis=-1)
             self.af = tf.repeat(self.af, input_shape[-1], axis=-1)
@@ -46,6 +54,7 @@ class DTCWT(layers.Layer):
         # 2 trees J+1 lists
         w = [[[[], []] for x in range(2)] for i in range(self.level+1)]
 
+        # 2 trees - 2 filters ( first stage is using differnet filter
         for m in range(2):
             for n in range(2):
                 [lo, w[0][m][n]] = analysis_filter_bank2d(x_norm, self.Faf[m][0], self.Faf[m][1], self.Faf[n][0], self.Faf[n][1])
@@ -53,6 +62,7 @@ class DTCWT(layers.Layer):
                     [lo, w[j][m][n]] = analysis_filter_bank2d(lo, self.af[m][0], self.af[m][1],self.af[n][0], self.af[n][1])
                 w[self.level][m][n] = lo
 
+        # add and subtract for the complex
         for j in range(self.level):
             for m in range(3):
 
@@ -60,6 +70,8 @@ class DTCWT(layers.Layer):
                 w[j][0][1][m], w[j][1][0][m] = add_sub(w[j][0][1][m], w[j][1][0][m])
 
         # concat into one big image
+        # different resolution as the tree is deeper
+        # TODO: How to split different resolutions into different channels
         j = 1
         w_c = w
 
@@ -80,16 +92,22 @@ class DTCWT(layers.Layer):
 
 
 class IDTCWT(layers.Layer):
+    """
+    Inverse Duel Tree Complex Wavelet Transform
+    Input: level - tree-level (int)
+    """
     def __init__(self, level=1, **kwargs):
         super(IDTCWT, self).__init__(**kwargs)
 
         if level <= 1:
             level = 1
 
-        self.level = level
+        self.level = int(level)
         self.conv_type = "SAME"
         self.border_padd = "SYMMETRIC"
 
+        # Faf - First analysis filter - for the first level
+        # Fsf - First synthesis filter
         Faf, Fsf = filters.FSfarras()
         af, sf = filters.duelfilt()
 
@@ -99,8 +117,8 @@ class IDTCWT(layers.Layer):
         self.sf = duel_filter_tf(sf)
 
     def build(self, input_shape):
-
-        if input_shape[-1] != 1:
+        # repeat last channel if input channel bigger then 1
+        if input_shape[-1] > 1:
             self.Faf = tf.repeat(self.Faf, input_shape[-1], axis=-1)
             self.Fsf = tf.repeat(self.Fsf, input_shape[-1], axis=-1)
             self.af = tf.repeat(self.af, input_shape[-1], axis=-1)
@@ -108,21 +126,25 @@ class IDTCWT(layers.Layer):
 
     def call(self, inputs, training=None, mask=None):
 
+        # convert one big image into list of tree levels
         w_rec = reconstruct_w_leveln(inputs, self.level)
 
         height = int(w_rec[0][0][0][0].shape[1]*2)
         width = int(w_rec[0][0][0][0].shape[2]*2)
 
+        # init image to be reconstructed
         y = tf.zeros((height, width, inputs.shape[-1]), dtype=tf.float32)
 
         w_i = [[[[list() for x in range(3)], [list() for x in range(3)]] for x in range(2)] for i in range(self.level+1)]
 
+        # first add and subtract (inverse the transform)
         for j in range(self.level):
             for m in range(3):
 
                 w_i[j][0][0][m], w_i[j][1][1][m] = add_sub(w_rec[j][0][0][m], w_rec[j][1][1][m])
                 w_i[j][0][1][m], w_i[j][1][0][m] = add_sub(w_rec[j][0][1][m], w_rec[j][1][0][m])
 
+        # syntesis with the First filters to be last in the reconstruction
         for m in range(2):
             for n in range(2):
                 lo = w_rec[self.level][m][n]
@@ -131,6 +153,7 @@ class IDTCWT(layers.Layer):
                 lo = synthesis_filter_bank2d(lo, w_i[0][m][n], self.Fsf[m][0], self.Fsf[m][1], self.Fsf[n][0], self.Fsf[n][1])
                 y = tf.math.add(y, lo)
 
+        # revert the normalization
         y = tf.math.divide(y, 2)
         return y
 

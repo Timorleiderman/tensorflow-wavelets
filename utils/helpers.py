@@ -33,6 +33,7 @@ def reconstruct_w_leveln(w, level):
 
     return w_rec
 
+
 def reconstruct_w_level2(w):
     w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
     ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
@@ -204,6 +205,7 @@ def dd2_row_permutation(x):
     res = tf.concat([x_even,x_odd], axis=1)
     return res
 
+
 def permute_rows_2_1(x):
 
     x_ds1 = x[:, 0::4, :, :]
@@ -242,6 +244,30 @@ def pad_fir(x, fir):
 
     return res
 
+
+def upsampler2d(x):
+    """
+    up sampling with zero insertion between rows and columns
+    :param x: 4 dim tensor (?, w, h, ch)
+    :return:  up sampled tensor with shape (?, 2*w, 2*h, ch)
+    """
+    # create zero like tensor
+    zero_tensor = tf.zeros_like(x)
+    # stack both tensors
+    stack_rows = tf.stack([x, zero_tensor], axis=3)
+    # reshape for zero insertion between the rows
+    stack_rows = tf.reshape(stack_rows, shape=[-1, x.shape[1], x.shape[2]*2, x.shape[3]])
+    # transpose in order to insert zeros for the columns
+    stack_rows = tf.transpose(stack_rows, perm=[0, 2, 1, 3])
+    # create zero like tensor but now like the padded one
+    zero_tensor_1 = tf.zeros_like(stack_rows)
+    # stack both tensors
+    stack_rows_cols = tf.stack([stack_rows, zero_tensor_1], axis=3)
+    # reshape for zero insertion between the columns
+    us_padded = tf.reshape(stack_rows_cols, shape=[-1, x.shape[1]*2, x.shape[2]*2, x.shape[3]])
+    # transpose back to normal
+    us_padded = tf.transpose(us_padded, perm=[0, 2, 1, 3])
+    return us_padded
 
 def up_sample_fir(x, fir):
     # create zero like tensor

@@ -16,11 +16,17 @@ from tensorflow.keras.utils import to_categorical
 
 
 class DMWT(layers.Layer):
+    """
+    Discrete Multi Wavlelets Transform
+    Input: wave_name - name of the Wavele Filters (ghm, dd2)
+    TODO: add support for more wavelets
+    """
     def __init__(self, wave_name='ghm', **kwargs):
         super(DMWT, self).__init__(**kwargs)
         self.wave_name = wave_name.lower()
 
     def build(self, input_shape):
+        # create filter matrix
         h = int(input_shape[1])
         w = int(input_shape[2])
         if self.wave_name == 'dd2':
@@ -30,6 +36,7 @@ class DMWT(layers.Layer):
         w_mat = tf.constant(w_mat, dtype=tf.float32)
         w_mat = tf.expand_dims(w_mat, axis=0)
         self.w_mat = tf.expand_dims(w_mat, axis=-1)
+        # repeat if number of channels is bigger then 1
         if input_shape[-1] != 1:
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
@@ -44,11 +51,16 @@ class DMWT(layers.Layer):
 # Inverse Discrete MultiWavelet transform Layer
 
 class IDMWT(layers.Layer):
+    """
+    Inverse Multi Wavelet Transform
+    wave_name - name of the Wavele Filters (ghm, dd2)
+    """
     def __init__(self, wave_name='ghm', **kwargs):
         super(IDMWT, self).__init__(**kwargs)
         self.wave_name = wave_name
 
     def build(self, input_shape):
+        # create filter matrix
         h = int(input_shape[1])//2
         w = int(input_shape[2])//2
         if self.wave_name == 'dd2':
@@ -56,10 +68,11 @@ class IDMWT(layers.Layer):
         else:
             w_mat = filters.ghm_w_mat(h, w)
         w_mat = tf.constant(w_mat, dtype=tf.float32)
+        # transpose for the reconstruction
         w_mat = tf.transpose(w_mat, perm=[1, 0])
         w_mat = tf.expand_dims(w_mat, axis=-1)
         self.w_mat = tf.expand_dims(w_mat, axis=0)
-        print(self.w_mat.shape)
+        # repeat if channels bigger then 1
         if input_shape[-1] != 1:
             self.w_mat = tf.repeat(self.w_mat, input_shape[-1], axis=-1)
 
@@ -83,7 +96,7 @@ if __name__ == "__main__":
 
     _, h, w, c = img_ex1.shape
     x_inp = layers.Input(shape=(h, w, c))
-    x = DMWT("dd2")(x_inp)
+    x = DMWT("ghm")(x_inp)
     model = Model(x_inp, x, name="mymodel")
     model.summary()
 

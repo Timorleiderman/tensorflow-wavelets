@@ -10,6 +10,7 @@ from tensorflow.keras import layers
 from tensorflow.keras.datasets import mnist, cifar10
 
 from utils.cast import *
+from utils.helpers import *
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -110,7 +111,6 @@ class DWT(layers.Layer):
             x = tf.concat([ll, lh, hl, hh], axis=-1)
         else:
             x = tf.concat([tf.concat([ll, lh], axis=1), tf.concat([hl, hh], axis=1)], axis=2)
-        print(x.shape)
         return x
 
 
@@ -142,30 +142,6 @@ class IDWT(layers.Layer):
 
         db2_hpf = tf.constant(db2_hpf[::-1])
         self.db2_hpf = tf.reshape(db2_hpf, (1, wavelet.rec_len, 1, 1))
-
-    def upsampler2d(self, x):
-        """
-        up sampling with zero insertion between rows and columns
-        :param x: 4 dim tensor (?, w, h, ch)
-        :return:  up sampled tensor with shape (?, 2*w, 2*h, ch)
-        """
-        # create zero like tensor
-        zero_tensor = tf.zeros_like(x)
-        # stack both tensors
-        stack_rows = tf.stack([x, zero_tensor], axis=3)
-        # reshape for zero insertion between the rows
-        stack_rows = tf.reshape(stack_rows, shape=[-1, x.shape[1], x.shape[2]*2, x.shape[3]])
-        # transpose in order to insert zeros for the columns
-        stack_rows = tf.transpose(stack_rows, perm=[0, 2, 1, 3])
-        # create zero like tensor but now like the padded one
-        zero_tensor_1 = tf.zeros_like(stack_rows)
-        # stack both tensors
-        stack_rows_cols = tf.stack([stack_rows, zero_tensor_1], axis=3)
-        # reshape for zero insertion between the columns
-        us_padded = tf.reshape(stack_rows_cols, shape=[-1, x.shape[1]*2, x.shape[2]*2, x.shape[3]])
-        # transpose back to normal
-        us_padded = tf.transpose(us_padded, perm=[0, 2, 1, 3])
-        return us_padded
 
     def call(self, inputs, training=None, mask=None):
 
@@ -199,10 +175,10 @@ class IDWT(layers.Layer):
         hl = tf.expand_dims(x[:, :, :, 2], axis=-1)
         hh = tf.expand_dims(x[:, :, :, 3], axis=-1)
 
-        ll_us_pad = self.upsampler2d(ll)
-        lh_us_pad = self.upsampler2d(lh)
-        hl_us_pad = self.upsampler2d(hl)
-        hh_us_pad = self.upsampler2d(hh)
+        ll_us_pad = upsampler2d(ll)
+        lh_us_pad = upsampler2d(lh)
+        hl_us_pad = upsampler2d(hl)
+        hh_us_pad = upsampler2d(hh)
 
         # convolution for the rows
         # transpose for the column convolution
