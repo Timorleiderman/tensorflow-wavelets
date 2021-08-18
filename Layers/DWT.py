@@ -9,18 +9,27 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.datasets import mnist, cifar10
 
+from utils.cast import *
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 class DWT(layers.Layer):
-    def __init__(self, name='haar', **kwargs):
+    """
+    Discrete Wavelet transform - tensorflow - keras
+    inputs:
+        name - wavelet name ( from pywavelet library)
+        concat - 1 - merge transform output to one channel
+               - 0 - split to 4 channels ( 1 img in -> 4 smaller img out)
+    """
+
+    def __init__(self, name='haar', concat=1, **kwargs):
         super(DWT, self).__init__(**kwargs)
         self._name = self.name + "_" + name
         # get filter coeffs from 3rd party lib
         wavelet = pywt.Wavelet(name)
         self.dec_len = wavelet.dec_len
-
+        self.concat = concat
         # decomposition filter low pass and hight pass coeffs
         db2_lpf = wavelet.dec_lo
         db2_hpf = wavelet.dec_hi
@@ -97,19 +106,28 @@ class DWT(layers.Layer):
         hh = dd[:, 1:dd.shape[1]:2, :, :]
 
         # concate all outputs ionto tensor
-        # x = tf.concat([ll, lh, hl, hh], axis=-1)
-        x = tf.concat([tf.concat([ll, lh], axis=2),tf.concat([hl, hh], axis=2)], axis=1)
+        if self.concat == 0:
+            x = tf.concat([ll, lh, hl, hh], axis=-1)
+        else:
+            x = tf.concat([tf.concat([ll, lh], axis=1), tf.concat([hl, hh], axis=1)], axis=2)
         print(x.shape)
         return x
 
 
 class IDWT(layers.Layer):
-    def __init__(self, name='haar', **kwargs):
+    """
+    Inverse Discrete Wavelet Transform - Tensorflow - keras
+    Inputs:
+        name - wavelet name ( from pywavelet library)
+        splited - 0 - not splitted One channel input([[ll , lh],[hl, hh]])
+                  0 - splitted 4 channels input([ll , lh, hl ,hh])
+    """
+    def __init__(self, name='haar', splited=0, **kwargs):
         super(IDWT, self).__init__(**kwargs)
         self._name = self.name + "_" + name
         self.pad_type = "VALID"
         self.border_pad = "SYMMETRIC"
-
+        self.splited = splited
         # get filter coeffs from 3rd party lib
         wavelet = pywt.Wavelet(name)
         self.rec_len = wavelet.rec_len
@@ -151,13 +169,15 @@ class IDWT(layers.Layer):
 
     def call(self, inputs, training=None, mask=None):
 
-        ll_lh_hl_hh = tf.split(inputs, 2, axis=1)
-        ll_lh = tf.split(ll_lh_hl_hh[0], 2, axis=2)
-        hl_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
-        ll_lh_conc = tf.concat(ll_lh, axis=-1)
-
-        hl_hh_conc = tf.concat(hl_hh, axis=-1)
-        x = tf.concat([ll_lh_conc, hl_hh_conc], axis=-1)
+        if self.splited == 1:
+            x = inputs
+        else:
+            ll_lh_hl_hh = tf.split(inputs, 2, axis=1)
+            ll_lh = tf.split(ll_lh_hl_hh[0], 2, axis=2)
+            hl_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
+            ll_lh_conc = tf.concat(ll_lh, axis=-1)
+            hl_hh_conc = tf.concat(hl_hh, axis=-1)
+            x = tf.concat([ll_lh_conc, hl_hh_conc], axis=-1)
 
         # border padding for convolution with low pass and high pass filters
         x = tf.pad(x,
@@ -242,45 +262,58 @@ if __name__ == "__main__":
 
     model = keras.Sequential()
     model.add(layers.InputLayer(input_shape=img_ex1.shape))
-    model.add(DWT(name=name))
+    model.add(DWT(name=name, concat=0))
     model.summary()
     coeffs = model.predict(img_ex2)
     _, w_coef, h_coef, c_coef = coeffs.shape
-    LL = coeffs[0, 0:w_coef//2, 0:h_coef//2, 0]
-    LH = coeffs[0, 0:w_coef//2, h_coef//2:, 0]
-    HL = coeffs[0, w_coef//2:, 0:h_coef//2, 0]
-    HH = coeffs[0, w_coef//2:, h_coef//2:, 0]
+
+    # data = tf_to_ndarray(coeffs, channel=3)
+    # data = cast_like_matlab_uint8_2d(data)
+    # cv2.imshow("test", data)
+    # cv2.waitKey(0)
+
+    # concat = 1
+    # LL = coeffs[0, 0:w_coef//2, 0:h_coef//2, 0]
+    # LH = coeffs[0, 0:w_coef//2, h_coef//2:, 0]
+    # HL = coeffs[0, w_coef//2:, 0:h_coef//2, 0]
+    # HH = coeffs[0, w_coef//2:, h_coef//2:, 0]
+    # print(coeffs.shape[1:])
+    # model = keras.Sequential()
+    # model.add(layers.InputLayer(input_shape=coeffs.shape[1:]))
+    # model.add(IDWT(name=name, splited=1))
+    # model.summary()
+
+    # my_recon = model.predict(coeffs)
+    # img_my_rec = my_recon[0, :, :, 0]
+    # coeffs2 = pywt.wavedec2(img, name, level=1)
+
+    # LL2 = coeffs2[0]
+    # LH2 = coeffs2[1][0]
+    # HL2 = coeffs2[1][1]
+    # HH2 = coeffs2[1][2]
+
+    # recon_pywt = pywt.waverec2(coeffs2, name)
+    # img_pywt_rec = recon_pywt
+
+    # print("LL mse ", mse.mse(LL, LL2))
+    # print("LH mse ", mse.mse(LH, LH2))
+    # print("HL mse ", mse.mse(HL, HL2))
+    # print("HH mse ", mse.mse(HH, HH2))
+    # print("img mse ", mse.mse(img_pywt_rec, img_my_rec))
+
+    # difference = cv2.absdiff(np.int32(img_my_rec), np.int32(img_pywt_rec))
+    # _, mask = cv2.threshold(difference.astype("uint8"), 0, 255, cv2.THRESH_BINARY)
+
+    # cv2.imshow("diff", mask)
+    # cv2.waitKey(0)
+    # pass
+
 
     model = keras.Sequential()
     model.add(layers.InputLayer(input_shape=coeffs.shape[1:]))
-    model.add(IDWT(name=name))
+    model.add(DWT(name=name, concat=0))
+    model.add(IDWT(name=name, splited=1))
     model.summary()
-
-    my_recon = model.predict(coeffs)
-    img_my_rec = my_recon[0, :, :, 0]
-    coeffs2 = pywt.wavedec2(img, name, level=1)
-
-    LL2 = coeffs2[0]
-    LH2 = coeffs2[1][0]
-    HL2 = coeffs2[1][1]
-    HH2 = coeffs2[1][2]
-
-    recon_pywt = pywt.waverec2(coeffs2, name)
-    img_pywt_rec = recon_pywt
-
-    print("LL mse ", mse.mse(LL, LL2))
-    print("LH mse ", mse.mse(LH, LH2))
-    print("HL mse ", mse.mse(HL, HL2))
-    print("HH mse ", mse.mse(HH, HH2))
-    print("img mse ", mse.mse(img_pywt_rec, img_my_rec))
-
-    difference = cv2.absdiff(np.int32(img_my_rec), np.int32(img_pywt_rec))
-    _, mask = cv2.threshold(difference.astype("uint8"), 0, 255, cv2.THRESH_BINARY)
-
-    cv2.imshow("diff", mask)
-    cv2.waitKey(0)
-    pass
-
 
 
 
