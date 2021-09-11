@@ -11,3 +11,5 @@ logs
 output/*
 *.mat
 !input/LennaGrey.png
+dist/*
+venv/*

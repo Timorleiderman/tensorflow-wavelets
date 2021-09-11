@@ -1,6 +1,6 @@
 # Timor Leiderman AUG 2021
-import cv2
-import numpy as np
+# import cv2
+# import numpy as np
 from tensorflow.keras import layers, Model
 from utils import filters
 from utils.helpers import *
@@ -87,25 +87,25 @@ class IDMWT(layers.Layer):
 
 if __name__ == "__main__":
     pass
-    img = cv2.imread("../input/LennaGrey.png", 0)
-    img_ex1 = np.expand_dims(img, axis=0)
+    # img = cv2.imread("../input/LennaGrey.png", 0)
+    # img_ex1 = np.expand_dims(img, axis=0)
+    # #
+    # if len(img_ex1.shape) <= 3:
+    #     img_ex1 = np.expand_dims(img_ex1, axis=-1)
     #
-    if len(img_ex1.shape) <= 3:
-        img_ex1 = np.expand_dims(img_ex1, axis=-1)
-
-
-    _, h, w, c = img_ex1.shape
-    x_inp = layers.Input(shape=(h, w, c))
-    x = DMWT("ghm")(x_inp)
-    model = Model(x_inp, x, name="mymodel")
-    model.summary()
-
-    out = model.predict(img_ex1)
-
-    out_l = tf_rgb_to_ndarray(out*2)
-    out1 = cast_like_matlab_uint8_2d_rgb(out_l)
-    cv2.imshow("orig", out1.astype('uint8'))
-    cv2.waitKey(0)
+    #
+    # _, h, w, c = img_ex1.shape
+    # x_inp = layers.Input(shape=(h, w, c))
+    # x = DMWT("ghm")(x_inp)
+    # model = Model(x_inp, x, name="mymodel")
+    # model.summary()
+    #
+    # out = model.predict(img_ex1)
+    #
+    # out_l = tf_rgb_to_ndarray(out*2)
+    # out1 = cast_like_matlab_uint8_2d_rgb(out_l)
+    # cv2.imshow("orig", out1.astype('uint8'))
+    # cv2.waitKey(0)
 
     # x_inp = layers.Input(shape=(28, 28, 1))
     # x = DMWT()(x_inp)

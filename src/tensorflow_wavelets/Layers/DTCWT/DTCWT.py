@@ -1,5 +1,5 @@
-import cv2
-import numpy as np
+# import cv2
+# import numpy as np
 from tensorflow.keras import layers, Model
 from utils import filters
 from utils.helpers import *
@@ -159,27 +159,28 @@ class IDTCWT(layers.Layer):
 
 
 if __name__ == "__main__":
-    img = cv2.imread("../input/Lenna_orig.png", 0)
-    img_ex1 = np.expand_dims(img, axis=0)
+    pass
+    # img = cv2.imread("../input/Lenna_orig.png", 0)
+    # img_ex1 = np.expand_dims(img, axis=0)
+    # #
+    # if len(img_ex1.shape) <= 3:
+    #     img_ex1 = np.expand_dims(img_ex1, axis=-1)
     #
-    if len(img_ex1.shape) <= 3:
-        img_ex1 = np.expand_dims(img_ex1, axis=-1)
-
-    _, h, w, c = img_ex1.shape
+    # _, h, w, c = img_ex1.shape
+    # #
     #
-
-    cplx_input = layers.Input(shape=(h, w, c))
-    x = DTCWT(2)(cplx_input)
-    # x = IDTCWT(2)(x)
-    model = Model(cplx_input, x, name="mymodel")
-    model.summary()
-
-    out = model.predict(img_ex1)
-    # diff = np.max(out[0] - img)
-    # print("diff is", diff)
-    cv2.imshow("orig", out[0].astype('uint8'))
-    # cv2.imshow("reconstructed", img.astype('uint8'))
-    cv2.waitKey(0)
+    # cplx_input = layers.Input(shape=(h, w, c))
+    # x = DTCWT(2)(cplx_input)
+    # # x = IDTCWT(2)(x)
+    # model = Model(cplx_input, x, name="mymodel")
+    # model.summary()
+    #
+    # out = model.predict(img_ex1)
+    # # diff = np.max(out[0] - img)
+    # # print("diff is", diff)
+    # cv2.imshow("orig", out[0].astype('uint8'))
+    # # cv2.imshow("reconstructed", img.astype('uint8'))
+    # cv2.waitKey(0)
     # x = layers.Conv2D(32, (3, 3), activation="relu",padding='same')(x)
     # x = layers.Dropout(0.5)(x)
     # x = layers.Flatten()(x)

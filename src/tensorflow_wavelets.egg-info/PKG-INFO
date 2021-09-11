@@ -1,0 +1,40 @@
+Metadata-Version: 2.1
+Name: tensorflow-wavelets
+Version: 1.0.7
+Summary: Tensorflow wavelet Layers
+Home-page: https://https://github.com/Timorleiderman/tensorflow-wavelets
+Author: Timor Leiderman
+Author-email: Timorleiderman@gmail.com
+License: UNKNOWN
+Project-URL: Bug Tracker, https://github.com/Timorleiderman/tensorflow-wavelets/issues
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# tensorflow-wavelets
+Multi Wavelets Transform Neural Networks Layer
+Duel Tree Complex Wavelets Transform Layer
+Discrete Wavelets Transform Layer
+
+# Enviroment:
+1. conda create --name dwtcnn python=3.6
+2. conda activate dwtcnn
+3. conda install scipy==1.5.2
+4. conda install matplotlib==3.3.4
+5. conda install tensorflow==1.15.0
+6. conda install keras==2.3.1
+7. conda install pywavelets
+8. pip install psnr-hvsm
+
+or just
+pip install -r requirements.txt
+
+
+# after training use
+tensorboard --logdir logs
+
+

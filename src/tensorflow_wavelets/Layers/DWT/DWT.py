@@ -1,8 +1,8 @@
 import os
-import cv2
+# import cv2
 import math
 import pywt
-import numpy as np
+# import numpy as np
 from utils import mse
 import tensorflow as tf
 from tensorflow import keras
@@ -216,6 +216,7 @@ class IDWT(layers.Layer):
 
 
 if __name__ == "__main__":
+    pass
     # (x_train, y_train), (x_test, y_test) = cifar10.load_data()
     # x_train = x_train.astype("float32")
     # x_test = x_test.astype("float32")
@@ -229,19 +230,19 @@ if __name__ == "__main__":
     # model.add(IDWT())
     # model.summary()
 
-    name = "db2"
-    img = cv2.imread("../input/LennaGrey.png", 0)
-    # img = cv2.imread("../input/Lenna_orig.png",0)
-    img_ex1 = np.expand_dims(img, axis=-1)
-    img_ex2 = np.expand_dims(img_ex1, axis=0)
-    # img_ex2 = np.expand_dims(img, axis=0)
-
-    model = keras.Sequential()
-    model.add(layers.InputLayer(input_shape=img_ex1.shape))
-    model.add(DWT(name=name, concat=0))
-    model.summary()
-    coeffs = model.predict(img_ex2)
-    _, w_coef, h_coef, c_coef = coeffs.shape
+    # name = "db2"
+    # img = cv2.imread("../input/LennaGrey.png", 0)
+    # # img = cv2.imread("../input/Lenna_orig.png",0)
+    # img_ex1 = np.expand_dims(img, axis=-1)
+    # img_ex2 = np.expand_dims(img_ex1, axis=0)
+    # # img_ex2 = np.expand_dims(img, axis=0)
+    #
+    # model = keras.Sequential()
+    # model.add(layers.InputLayer(input_shape=img_ex1.shape))
+    # model.add(DWT(name=name, concat=0))
+    # model.summary()
+    # coeffs = model.predict(img_ex2)
+    # _, w_coef, h_coef, c_coef = coeffs.shape
 
     # data = tf_to_ndarray(coeffs, channel=3)
     # data = cast_like_matlab_uint8_2d(data)
@@ -284,14 +285,14 @@ if __name__ == "__main__":
     # cv2.waitKey(0)
     # pass
 
-
-    model = keras.Sequential()
-    model.add(layers.InputLayer(input_shape=coeffs.shape[1:]))
-    model.add(DWT(name=name, concat=0))
-    model.add(IDWT(name=name, splited=1))
-    model.summary()
-
-
+    #
+    # model = keras.Sequential()
+    # model.add(layers.InputLayer(input_shape=coeffs.shape[1:]))
+    # model.add(DWT(name=name, concat=0))
+    # model.add(IDWT(name=name, splited=1))
+    # model.summary()
+    #
+    #
 
 
     # a = model.predict(frog, steps=1)
