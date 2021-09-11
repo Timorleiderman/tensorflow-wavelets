@@ -13,3 +13,4 @@ output/*
 !input/LennaGrey.png
 dist/*
 venv/*
+*.egg-info*
