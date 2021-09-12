@@ -1,7 +1,8 @@
 tensorflow-wavelets is an implementation of
-- *Multi Wavelets Transform Neural Networks Layer*
-- *Duel Tree Complex Wavelets Transform Layer*
 - *Discrete Wavelets Transform Layer*
+- *Duel Tree Complex Wavelets Transform Layer*
+- *Multi Wavelets Transform Neural Networks Layer*
+
 
 ## Installation
 
