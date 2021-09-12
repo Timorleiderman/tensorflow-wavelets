@@ -1,10 +1,10 @@
 
 import math
 
-import cv2
+# import cv2
 import tensorflow as tf
-from utils import filters
-from utils.cast import *
+from tensorflow_wavelets.utils import filters
+from tensorflow_wavelets.utils.cast import *
 
 
 def split_to_ll_lhhlhh(data):

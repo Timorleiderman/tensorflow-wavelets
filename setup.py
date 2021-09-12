@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="tensorflow-wavelets",
-    version="1.0.9",
+    version="1.0.16",
     author="Timor Leiderman",
     author_email="Timorleiderman@gmail.com",
     description="Tensorflow wavelet Layers",
@@ -20,6 +20,11 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    keywords = ['Wavelets', 'Tensorflow'],
+    install_requires=[            
+          'tensorflow',
+          'PyWavelets',
+      ],
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",

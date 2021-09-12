@@ -3,14 +3,14 @@ import os
 import math
 import pywt
 # import numpy as np
-from utils import mse
+from tensorflow_wavelets.utils import mse
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.datasets import mnist, cifar10
+# from tensorflow.keras.datasets import mnist, cifar10
 
-from utils.cast import *
-from utils.helpers import *
+#from tensorflow_wavelets.utils.cast import *
+from tensorflow_wavelets.utils.helpers import *
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -48,8 +48,10 @@ class DWT(layers.Layer):
     def build(self, input_shape):
         # filter dims should be bigger if input is not gray scale
         if input_shape[-1] != 1:
-            self.db2_lpf = tf.repeat(self.db2_lpf, input_shape[-1], axis=-1)
-            self.db2_hpf = tf.repeat(self.db2_hpf, input_shape[-1], axis=-1)
+            #self.db2_lpf = tf.repeat(self.db2_lpf, input_shape[-1], axis=-1)
+            self.db2_lpf = tf.keras.backend.repeat_elements(self.db2_lpf, input_shape[-1], axis=-1)
+            #self.db2_hpf = tf.repeat(self.db2_hpf, input_shape[-1], axis=-1)
+            self.db2_hpf = tf.keras.backend.repeat_elements(self.db2_hpf, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
 
