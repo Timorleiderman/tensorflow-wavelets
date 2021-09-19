@@ -2,9 +2,9 @@
 # import cv2
 # import numpy as np
 from tensorflow.keras import layers, Model
-from utils import filters
-from utils.helpers import *
-from utils.cast import *
+from tensorflow_wavelets.utils import filters
+from tensorflow_wavelets.utils.helpers import *
+from tensorflow_wavelets.utils.cast import *
 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
