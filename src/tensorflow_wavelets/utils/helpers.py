@@ -1,4 +1,4 @@
-
+import tensorflow as tf
 from tensorflow_wavelets.utils.cast import *
 
 
