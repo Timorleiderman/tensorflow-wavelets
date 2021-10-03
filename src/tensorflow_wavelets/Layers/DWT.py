@@ -1,16 +1,8 @@
-import os
-# import cv2
-import math
 import pywt
-# import numpy as np
-from tensorflow_wavelets.utils import mse
 import tensorflow as tf
-from tensorflow import keras
 from tensorflow.keras import layers
-# from tensorflow.keras.datasets import mnist, cifar10
-
-#from tensorflow_wavelets.utils.cast import *
 from tensorflow_wavelets.utils.helpers import *
+
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -151,10 +143,10 @@ class IDWT(layers.Layer):
             x = inputs
         else:
             ll_lh_hl_hh = tf.split(inputs, 2, axis=1)
-            ll_lh = tf.split(ll_lh_hl_hh[0], 2, axis=2)
-            hl_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
-            ll_lh_conc = tf.concat(ll_lh, axis=-1)
-            hl_hh_conc = tf.concat(hl_hh, axis=-1)
+            ll_hl = tf.split(ll_lh_hl_hh[0], 2, axis=2)
+            lh_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
+            ll_lh_conc = tf.concat(ll_hl, axis=-1)
+            hl_hh_conc = tf.concat(lh_hh, axis=-1)
             x = tf.concat([ll_lh_conc, hl_hh_conc], axis=-1)
 
         # border padding for convolution with low pass and high pass filters
@@ -173,8 +165,8 @@ class IDWT(layers.Layer):
         # and expand the dims for the up sampling
 
         ll = tf.expand_dims(x[:, :, :, 0], axis=-1)
-        lh = tf.expand_dims(x[:, :, :, 1], axis=-1)
-        hl = tf.expand_dims(x[:, :, :, 2], axis=-1)
+        lh = tf.expand_dims(x[:, :, :, 2], axis=-1)
+        hl = tf.expand_dims(x[:, :, :, 1], axis=-1)
         hh = tf.expand_dims(x[:, :, :, 3], axis=-1)
 
         ll_us_pad = upsampler2d(ll)
@@ -213,7 +205,7 @@ class IDWT(layers.Layer):
                                   hl_conv_hpf_lpf_tr,
                                   hh_conv_hpf_hpf_tr])
         # crop the paded part
-        crop = (self.rec_len -1)*2
+        crop = (self.rec_len - 1)*2
         return reconstructed[:, crop-1:-crop, crop-1:-crop, :]
 
 
