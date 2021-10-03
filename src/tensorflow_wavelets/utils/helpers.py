@@ -1,5 +1,5 @@
 
-from utils.cast import *
+from tensorflow_wavelets.utils.cast import *
 
 
 def split_to_ll_lhhlhh(data):
