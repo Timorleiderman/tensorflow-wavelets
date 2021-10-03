@@ -1,10 +1,5 @@
 
-import math
-
-# import cv2
-import tensorflow as tf
-from tensorflow_wavelets.utils import filters
-from tensorflow_wavelets.utils.cast import *
+from utils.cast import *
 
 
 def split_to_ll_lhhlhh(data):
@@ -12,11 +7,11 @@ def split_to_ll_lhhlhh(data):
     split_1 = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)
     lhhlhh = [split_0[1]] + split_1
     ll = split_0[0]
-    return [ll,lhhlhh]
+    return [ll, lhhlhh]
 
 
 def reconstruct_w_leveln(w, level):
-    w_rec = [[[[],[]] for x in range(2)] for i in range(level+1)]
+    w_rec = [[[[], []] for _ in range(2)] for __ in range(level+1)]
     ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
     ws02 = tf.split(tf.split(w, 2, axis=1)[1], 2, axis=2)
     w_split = [ws01]+[ws02]
@@ -35,7 +30,7 @@ def reconstruct_w_leveln(w, level):
 
 
 def reconstruct_w_level2(w):
-    w_rec = [[[[],[]] for x in range(2)] for i in range(2+1)]
+    w_rec = [[[[], []] for _ in range(2)] for __ in range(2+1)]
     ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
     ws02 = tf.split(tf.split(w, 2, axis=1)[1], 2, axis=2)
     w_split = [ws01] + [ws02]
@@ -113,7 +108,6 @@ def list_to_tf(data):
 
 
 def duel_filter_tf(duelfilt):
-    filt_len = len(duelfilt[0][0])
 
     tree1_lp_tf = list_to_tf(duelfilt[0][0])
     tree1_hp_tf = list_to_tf(duelfilt[0][1])
@@ -179,7 +173,8 @@ def permute_rows_4_2(x):
     slice_x_rc1_ds1_tr = tf.transpose(slice_x_rc1_ds1, perm=[0, 2, 1, 3])
     stack_x = tf.stack([slice_x_rc0_ds0_tr, slice_x_rc0_ds1_tr, slice_x_rc1_ds0_tr, slice_x_rc1_ds1_tr], axis=3)
     # reshape for insertion between the rows
-    perm_cols = tf.reshape(stack_x, shape=[-1, slice_x_rc0_ds0_tr.shape[1], slice_x_rc0_ds0_tr.shape[2]*4, slice_x_rc0_ds0_tr.shape[3]])
+    perm_cols = tf.reshape(stack_x, shape=[-1, slice_x_rc0_ds0_tr.shape[1], slice_x_rc0_ds0_tr.shape[2]*4,
+                                           slice_x_rc0_ds0_tr.shape[3]])
     res = tf.transpose(perm_cols, perm=[0, 2, 1, 3])
 
     return res
@@ -202,7 +197,7 @@ def dd2_row_permutation(x):
     x_even = x[:, 0::2, :, :]
     x_odd = x[:, 1::2, :, :]
 
-    res = tf.concat([x_even,x_odd], axis=1)
+    res = tf.concat([x_even, x_odd], axis=1)
     return res
 
 
@@ -234,9 +229,9 @@ def pad_fir(x, fir):
 
     filt_len = fir.shape[1]
     x_pad = tf.pad(x,
-                       [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]],
-                       mode='CONSTANT',
-                       constant_values=0)
+                   [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]],
+                   mode='CONSTANT',
+                   constant_values=0)
 
     res = tf.nn.conv2d(
         x_pad, fir, padding='SAME', strides=[1, 1, 1, 1],
@@ -269,6 +264,7 @@ def upsampler2d(x):
     us_padded = tf.transpose(us_padded, perm=[0, 2, 1, 3])
     return us_padded
 
+
 def up_sample_fir(x, fir):
     # create zero like tensor
     x = tf.transpose(x, perm=[0, 2, 1, 3])
@@ -291,12 +287,12 @@ def up_sample_4_1(x):
     b = tf.split(x, 2, axis=2)[1]
     stack_a_b = tf.stack([a, b], axis=3)
     us = tf.reshape(stack_a_b, shape=[-1, a.shape[1], a.shape[2]*2, a.shape[3]])
-    us_tr = tf.transpose(us, perm=[0,2,1,3])
+    us_tr = tf.transpose(us, perm=[0, 2, 1, 3])
     us_l = tf.split(us_tr, 2, axis=2)[0]
     us_r = tf.split(us_tr, 2, axis=2)[1]
     stack_l_r = tf.stack([us_l, us_r], axis=3)
     us_us = tf.reshape(stack_l_r, shape=[-1, us_l.shape[1], us_l.shape[2]*2, x.shape[3]])
-    res = tf.transpose(us_us, perm=[0,2,1,3])
+    res = tf.transpose(us_us, perm=[0, 2, 1, 3])
 
     return res
 
@@ -359,10 +355,10 @@ def synthesis_filter_bank2d(ca, cd, lor_row, hir_row, lor_col, hir_col):
     w = int(ca.shape[2])
     filt_len = int(lor_row.shape[1])
 
-    ll = tf.transpose(ca, perm=[0,2,1,3])
-    lh = tf.transpose(cd[0], perm=[0,2,1,3])
-    hl = tf.transpose(cd[1], perm=[0,2,1,3])
-    hh = tf.transpose(cd[2], perm=[0,2,1,3])
+    ll = tf.transpose(ca, perm=[0, 2, 1, 3])
+    lh = tf.transpose(cd[0], perm=[0, 2, 1, 3])
+    hl = tf.transpose(cd[1], perm=[0, 2, 1, 3])
+    hh = tf.transpose(cd[2], perm=[0, 2, 1, 3])
 
     ll_pad = tf.pad(ll,
                     [[0, 0], [filt_len//2, filt_len//2], [0, 0], [0, 0]],
@@ -417,7 +413,7 @@ def synthesis_filter_bank2d(ca, cd, lor_row, hir_row, lor_col, hir_col):
     ll_lh_conv = up_sample_fir(ll_lh_pad, lor_row)
     hl_hh_conv = up_sample_fir(hl_hh_pad, hir_row)
 
-    ll_lh_hl_hh_add = tf.math.add(ll_lh_conv,hl_hh_conv)
+    ll_lh_hl_hh_add = tf.math.add(ll_lh_conv, hl_hh_conv)
     ll_lh_hl_hh_add_crop = ll_lh_hl_hh_add[:, filt_len//2:-filt_len//2-2, :, :]
 
     y = circular_shift_fix_crop(ll_lh_hl_hh_add_crop, filt_len-2, 2*h)
@@ -427,14 +423,9 @@ def synthesis_filter_bank2d(ca, cd, lor_row, hir_row, lor_col, hir_col):
 
 
 def analysis_filter_bank2d_ghm(x, lp1, lp2, hp1, hp2):
-    # parameters
-    conv_type = 'same'
-    h = int(x.shape[1])
-    w = int(x.shape[2])
-
     filt_len = int(lp1.shape[1])
     x_os = over_sample_rows(x)
-    x_pad = tf.pad(x_os,[[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT',constant_values=0)
+    x_pad = tf.pad(x_os, [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT', constant_values=0)
 
     lp1_ds = fir_down_sample(x_pad, lp1, filt_len-2)
     lp1_ds1 = lp1_ds[:, 0:lp1_ds.shape[1]-5:2, :, :]
@@ -448,73 +439,74 @@ def analysis_filter_bank2d_ghm(x, lp1, lp2, hp1, hp2):
     hp2_ds = fir_down_sample(x_pad, hp2, filt_len-2)
     hp2_ds1 = hp2_ds[:, 2:lp2_ds.shape[1]-3:2, :, :]*(-1)
 
-    lp1_ds1_tr = tf.transpose(lp1_ds1, perm=[0,2,1,3])
-    lp2_ds1_tr = tf.transpose(lp2_ds1, perm=[0,2,1,3])
-    hp1_ds1_tr = tf.transpose(hp1_ds1, perm=[0,2,1,3])
-    hp2_ds1_tr = tf.transpose(hp2_ds1, perm=[0,2,1,3])
+    lp1_ds1_tr = tf.transpose(lp1_ds1, perm=[0, 2, 1, 3])
+    lp2_ds1_tr = tf.transpose(lp2_ds1, perm=[0, 2, 1, 3])
+    hp1_ds1_tr = tf.transpose(hp1_ds1, perm=[0, 2, 1, 3])
+    hp2_ds1_tr = tf.transpose(hp2_ds1, perm=[0, 2, 1, 3])
 
     lp1_ds1_os = over_sample_rows(lp1_ds1_tr)
     lp2_ds1_os = over_sample_rows(lp2_ds1_tr)
     hp1_ds1_os = over_sample_rows(hp1_ds1_tr)
     hp2_ds1_os = over_sample_rows(hp2_ds1_tr)
 
-    lp1_ds1_os_pad = tf.pad(lp1_ds1_os,[[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT',constant_values=0)
-    lp2_ds1_os_pad = tf.pad(lp2_ds1_os,[[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT',constant_values=0)
-    hp1_ds1_os_pad = tf.pad(hp1_ds1_os,[[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT',constant_values=0)
-    hp2_ds1_os_pad = tf.pad(hp2_ds1_os,[[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT',constant_values=0)
+    lp1_ds1_os_pad = tf.pad(lp1_ds1_os,
+                            [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT', constant_values=0)
+    lp2_ds1_os_pad = tf.pad(lp2_ds1_os,
+                            [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT', constant_values=0)
+    hp1_ds1_os_pad = tf.pad(hp1_ds1_os,
+                            [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT', constant_values=0)
+    hp2_ds1_os_pad = tf.pad(hp2_ds1_os,
+                            [[0, 0], [filt_len, filt_len], [0, 0], [0, 0]], mode='CONSTANT', constant_values=0)
 
     lp1_lp1_ds = fir_down_sample(lp1_ds1_os_pad, lp1, start=filt_len-2, step=4)
     lp1_hp1_ds = fir_down_sample(lp1_ds1_os_pad, hp1, start=filt_len-2, step=4)
     hp1_lp1_ds = fir_down_sample(hp1_ds1_os_pad, lp1, start=filt_len-2, step=4)
     hp1_hp1_ds = fir_down_sample(hp1_ds1_os_pad, hp1, start=filt_len-2, step=4)
 
-    lp1_lp1_tr = tf.transpose(lp1_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
-    lp1_hp1_tr = tf.transpose(lp1_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp1_lp1_tr = tf.transpose(hp1_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp1_hp1_tr = tf.transpose(hp1_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp1_lp1_tr = tf.transpose(lp1_lp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    lp1_hp1_tr = tf.transpose(lp1_hp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp1_lp1_tr = tf.transpose(hp1_lp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp1_hp1_tr = tf.transpose(hp1_hp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
 
     lp1_lp2_ds = fir_down_sample(lp1_ds1_os_pad, lp2, start=filt_len-2, step=4)
     lp1_hp2_ds = fir_down_sample(lp1_ds1_os_pad, hp2, start=filt_len-2, step=4)
     hp1_lp2_ds = fir_down_sample(hp1_ds1_os_pad, lp2, start=filt_len-2, step=4)
     hp1_hp2_ds = fir_down_sample(hp1_ds1_os_pad, hp2, start=filt_len-2, step=4)
 
-    lp1_lp2_tr = tf.transpose(lp1_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
-    lp1_hp2_tr = tf.transpose(lp1_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp1_lp2_tr = tf.transpose(hp1_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp1_hp2_tr = tf.transpose(hp1_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp1_lp2_tr = tf.transpose(lp1_lp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    lp1_hp2_tr = tf.transpose(lp1_hp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp1_lp2_tr = tf.transpose(hp1_lp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp1_hp2_tr = tf.transpose(hp1_hp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
 
     lp2_lp1_ds = fir_down_sample(lp2_ds1_os_pad, lp1, start=filt_len-2, step=4)
     lp2_hp1_ds = fir_down_sample(lp2_ds1_os_pad, hp1, start=filt_len-2, step=4)
     hp2_lp1_ds = fir_down_sample(hp2_ds1_os_pad, lp1, start=filt_len-2, step=4)
     hp2_hp1_ds = fir_down_sample(hp2_ds1_os_pad, hp1, start=filt_len-2, step=4)
 
-    lp2_lp1_tr = tf.transpose(lp2_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
-    lp2_hp1_tr = tf.transpose(lp2_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp2_lp1_tr = tf.transpose(hp2_lp1_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp2_hp1_tr = tf.transpose(hp2_hp1_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp2_lp1_tr = tf.transpose(lp2_lp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    lp2_hp1_tr = tf.transpose(lp2_hp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp2_lp1_tr = tf.transpose(hp2_lp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp2_hp1_tr = tf.transpose(hp2_hp1_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
 
     lp2_lp2_ds = fir_down_sample(lp2_ds1_os_pad, lp2, start=filt_len-2, step=4)
     lp2_hp2_ds = fir_down_sample(lp2_ds1_os_pad, hp2, start=filt_len-2, step=4)
     hp2_lp2_ds = fir_down_sample(hp2_ds1_os_pad, lp2, start=filt_len-2, step=4)
     hp2_hp2_ds = fir_down_sample(hp2_ds1_os_pad, hp2, start=filt_len-2, step=4)
 
-    lp2_lp2_tr = tf.transpose(lp2_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
-    lp2_hp2_tr = tf.transpose(lp2_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp2_lp2_tr = tf.transpose(hp2_lp2_ds[:,:-3,:,:], perm=[0,2,1,3])
-    hp2_hp2_tr = tf.transpose(hp2_hp2_ds[:,:-3,:,:], perm=[0,2,1,3])
+    lp2_lp2_tr = tf.transpose(lp2_lp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    lp2_hp2_tr = tf.transpose(lp2_hp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp2_lp2_tr = tf.transpose(hp2_lp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
+    hp2_hp2_tr = tf.transpose(hp2_hp2_ds[:, :-3, :, :], perm=[0, 2, 1, 3])
 
-    res = [[lp1_lp1_tr, lp1_hp1_tr,hp1_lp1_tr, hp1_hp1_tr],
-           [lp1_lp2_tr, lp1_hp2_tr,hp1_lp2_tr, hp1_hp2_tr],
-           [lp2_lp1_tr, lp2_hp1_tr,hp2_lp1_tr, hp2_hp1_tr],
-           [lp2_lp2_tr, lp2_hp2_tr,hp2_lp2_tr, hp2_hp2_tr],
+    res = [[lp1_lp1_tr, lp1_hp1_tr, hp1_lp1_tr, hp1_hp1_tr],
+           [lp1_lp2_tr, lp1_hp2_tr, hp1_lp2_tr, hp1_hp2_tr],
+           [lp2_lp1_tr, lp2_hp1_tr, hp2_lp1_tr, hp2_hp1_tr],
+           [lp2_lp2_tr, lp2_hp2_tr, hp2_lp2_tr, hp2_hp2_tr],
            ]
     return res
 
 
 def synthesis_filter_bank2d_ghm_mult(x, w_mat):
-
-    h = int(x.shape[1])//2
-    w = int(x.shape[2])//2
 
     ll = tf.split(tf.split(x, 2, axis=1)[0], 2, axis=2)[0]
     lh = tf.split(tf.split(x, 2, axis=1)[0], 2, axis=2)[1]
