@@ -49,8 +49,26 @@ class TestSrc(unittest.TestCase):
         for img_dec, img_test in zip(decoded_imgs, x_test):
             self.assertLess(mse(img_dec, img_test), 1e2, "mse should be less then 0.01")
 
-    def test_dmwt_idmwt(self):
-        pass
+    def test_dmwt(self):
+        (x_train, y_train), (x_test, y_test) = load_mnist(remove_n_samples=1000)
+        input_shape = (28, 28, 1)
+        model = basic_dmwt(input_shape=input_shape, nb_classes=10, wave_name="ghm", eagerly=True)
+        model.compile(loss="categorical_crossentropy",optimizer='adam', metrics=["accuracy"])
+        model.fit(x_train, y_train, validation_split=0.2, epochs=20, batch_size=32, verbose=2,)
+        test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
+        self.assertGreater(test_acc, 0.8, "test accuracy should be higher then 0.8")
+        self.assertLess(test_loss, 0.8, "test loss should be less then 0.8")
+
+    def test_dtcwt(self):
+        (x_train, y_train), (x_test, y_test) = load_mnist(remove_n_samples=1000)
+        input_shape = (28, 28, 1)
+        model = basic_dtcwt(input_shape=input_shape, nb_classes=10, level=2, eagerly=True)
+        model.compile(loss="categorical_crossentropy",optimizer='adam', metrics=["accuracy"])
+        model.fit(x_train, y_train, validation_split=0.2, epochs=20, batch_size=32, verbose=2,)
+        test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
+        self.assertGreater(test_acc, 0.8, "test accuracy should be higher then 0.8")
+        self.assertLess(test_loss, 0.8, "test loss should be less then 0.8")
+
 
 
 if __name__ == '__main__':
