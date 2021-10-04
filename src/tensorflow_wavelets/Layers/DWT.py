@@ -1,7 +1,7 @@
 import pywt
 import tensorflow as tf
 from tensorflow.keras import layers
-from src.tensorflow_wavelets.utils.helpers import *
+from tensorflow_wavelets.utils.helpers import *
 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'

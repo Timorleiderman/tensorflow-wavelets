@@ -1,7 +1,8 @@
 import math
 import numpy as np
 import tensorflow as tf
-from utils.cast import cast_like_matlab_uint8_2d
+from tensorflow_wavelets.utils.cast import cast_like_matlab_uint8_2d
+
 
 def write_raw(file_path, data):
     with open(file_path, "wb") as outfile:

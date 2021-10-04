@@ -47,7 +47,7 @@ class TestSrc(unittest.TestCase):
         encoded_imgs = model.encoder(x_test).numpy()
         decoded_imgs = model.decoder(encoded_imgs).numpy()
         for img_dec, img_test in zip(decoded_imgs, x_test):
-            self.assertLess(mse(img_dec, img_test), 1e2, "wow")
+            self.assertLess(mse(img_dec, img_test), 1e2, "mse should be less then 0.01")
 
 
 if __name__ == '__main__':

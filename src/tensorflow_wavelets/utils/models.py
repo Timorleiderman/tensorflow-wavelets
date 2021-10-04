@@ -1,10 +1,8 @@
-from abc import ABC
-
 import tensorflow as tf
-import Layers.DWT as DWT
 from tensorflow import keras
 from tensorflow.keras import layers
-import Layers.Activation as Activation
+import tensorflow_wavelets.Layers.DWT as DWT
+import tensorflow_wavelets.Layers.Activation as Activation
 from tensorflow.keras.models import Model
 
 
