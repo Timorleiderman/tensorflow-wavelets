@@ -48,7 +48,7 @@ model.summary()
 ```
 
 from tensorflow.keras import layers
-x_inp = layers.Input(shape=(h, w, c))
+x_inp = layers.Input(shape=(512, 512, 1))
 x = DMWT("ghm")(x_inp)
 x = SureThreshold("hard")(x)
 x = IDMWT("ghm")(x)
