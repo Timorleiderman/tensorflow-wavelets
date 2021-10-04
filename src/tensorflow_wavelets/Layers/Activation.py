@@ -48,7 +48,7 @@ class SureThreshold(layers.Layer):
         threshold = sigma_square / denominator
 
         if self.mode == 'hard':
-            cond = tf.less(hh, tf.zeros(tf.shape(hh)))
+            cond = tf.math.less(hh, threshold)
             mask = tf.where(cond, tf.zeros(tf.shape(hh)), tf.ones(tf.shape(hh)))
             hh_new = tf.multiply(hh, mask)
         else:
