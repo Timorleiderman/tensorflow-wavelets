@@ -5,17 +5,15 @@ import tensorflow_probability as tfp
 from tensorflow.keras import layers
 
 
-class SureSoftThreshold(layers.Layer):
+class SureThreshold(layers.Layer):
     """
     Discrete Multi Wavlelets Transform
     Input: wave_name - name of the Wavele Filters (ghm, dd2)
     TODO: add support for more wavelets
     """
-    def __init__(self, **kwargs):
-        super(SureSoftThreshold, self).__init__(**kwargs)
-        self.size = 0
-        self.low = 0.5
-        self.hight = 255
+    def __init__(self, mode='soft', **kwargs):
+        super(SureThreshold, self).__init__(**kwargs)
+        self.mode = mode.lower()
 
     def build(self, input_shape):
         pass
@@ -48,7 +46,13 @@ class SureSoftThreshold(layers.Layer):
         var_square = tf.math.square(var)
         denominator = tf.math.sqrt(tf.maximum(tf.math.subtract(var_square, sigma_square), 0))
         threshold = sigma_square / denominator
-        hh_new = tfp.math.soft_threshold(hh, threshold)
+
+        if self.mode == 'hard':
+            cond = tf.less(hh, tf.zeros(tf.shape(hh)))
+            mask = tf.where(cond, tf.zeros(tf.shape(hh)), tf.ones(tf.shape(hh)))
+            hh_new = tf.multiply(hh, mask)
+        else:
+            hh_new = tfp.math.soft_threshold(hh, threshold)
         # concat everything back to one image
         if inputs.shape[-1] == 1:
             x = tf.concat([tf.concat([ll, lh], axis=1), tf.concat([hl, hh_new], axis=1)], axis=2)
@@ -57,51 +61,25 @@ class SureSoftThreshold(layers.Layer):
         return x
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     pass
+
     # import cv2
     # from tensorflow.keras import Model
-    # from Layers import DWT
-    # from utils.cast import *
+    # from tensorflow_wavelets.Layers import DWT
+    # from tensorflow_wavelets.utils.cast import *
     # import numpy as np
-    # from utils.mse import mse
-
-    # img = cv2.imread("../../../input/LennaGrey.png", 0)
+    # from tensorflow_wavelets.utils.mse import mse
     #
-    # sigma_np = np.median(np.abs(img)) / 0.674489
-    # threshold_np = sigma_np**2 / np.sqrt(max(img.var()**2 - sigma_np**2, 0))
-    #
+    # img = cv2.imread("../../../Development/input/LennaGrey.png", 0)
     # inputs = np.expand_dims(img, axis=0)
-    # #
-    # if len(inputs.shape) <= 3:
-    #     inputs = np.expand_dims(inputs, axis=-1)
+    # inputs = np.expand_dims(inputs, axis=-1)
+    # # inputs = tf.cast(inputs, dtype=tf.float32)
     #
-    # if (inputs.shape[-1] == 1):
-    #     coefs = tf.split(inputs, 2, axis=2)
-    #     HH = tf.split(coefs, 2, axis=1)
-
-    # inputs = tf.cast(inputs, dtype=tf.float32)
-    # med = tfp.stats.percentile(tf.abs(inputs), 50)
-    # sigma = tf.math.divide(med, 0.674489)
-    # sigma_square = tf.math.square(sigma)
-    #
-    # var1 = tf.experimental.numpy.var(inputs[:, :, :, 3])
-    # var_square = tf.math.square(var1)
-    #
-    # denominator = tf.math.sqrt(tf.maximum(tf.math.subtract(var_square, sigma_square), 0))
-    # threshold = sigma_square / denominator
-    # out = tfp.math.soft_threshold(inputs, threshold)
-    #
-    #
-    # print("sigma", sigma, sigma.shape)
-    # print("variance", var1)
-    # print("threshold", threshold)
-    # print("sigma np", sigma_np, "var_np", img.var(), "threshold _np", threshold_np)
-
     # _, h, w, c = inputs.shape
     # x_inp = layers.Input(shape=(h, w, c))
     # x = DWT.DWT(name="db2", concat=1)(x_inp)
-    # x = RigreSure()(x)
+    # x = SureThreshold(mode='soft')(x)
     # x = DWT.IDWT(name="db2", splited=0)(x)
     # model = Model(x_inp, x, name="mymodel")
     # model.summary()
