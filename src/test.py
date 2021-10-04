@@ -26,12 +26,34 @@ class TestSrc(unittest.TestCase):
         mse_lim = 0.072
         self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
 
+    def test_dwt_idwt_sof_thresh(self):
+
+        img = cv2.imread("../Development/input/LennaGrey.png", 0)
+        img_ex1 = np.expand_dims(img, axis=-1)
+        img_ex2 = np.expand_dims(img_ex1, axis=0)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft')
+        rec = model.predict(img_ex2)
+        rec = rec[0, ..., 0]
+        mse_lim = 0.072
+        self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
+
+    def test_dwt_idwt_hard_thresh(self):
+
+        img = cv2.imread("../Development/input/LennaGrey.png", 0)
+        img_ex1 = np.expand_dims(img, axis=-1)
+        img_ex2 = np.expand_dims(img_ex1, axis=0)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard')
+        rec = model.predict(img_ex2)
+        rec = rec[0, ..., 0]
+        mse_lim = 2
+        self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
+
     def test_dwt_idwt(self):
 
         img = cv2.imread("../Development/input/LennaGrey.png", 0)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, soft_theshold=False)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False)
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 1e-3
