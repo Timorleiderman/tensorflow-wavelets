@@ -25,6 +25,11 @@ def tf_rgb_to_ndarray(data, datatype=tf.float32):
     return data
 
 
+def tf2_rgb_to_ndarray(data, datatype=tf.float32):
+    data = tf.image.convert_image_dtype(data[0, ..., :], dtype=datatype)
+    return data
+
+
 def tf_rank4_to_ndarray(data, datatype=tf.float32):
     data = tf.image.convert_image_dtype(data[0, ..., 0], dtype=datatype)
     with tf.Session() as sess:
