@@ -3,6 +3,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflow_wavelets.Layers.DWT as DWT
 import tensorflow_wavelets.Layers.DMWT as DMWT
+import tensorflow_wavelets.Layers.DTCWT as DTCWT
 import tensorflow_wavelets.Layers.Activation as Activation
 from tensorflow.keras.models import Model
 
@@ -20,18 +21,30 @@ def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, soft_theshold=Tr
     model.run_eagerly = eagerly
     return model
 
-def basic_dmwt_idmwt(input_shape, wave_name="db2", eagerly=False, soft_theshold=True):
-    # load DWT IDWT model
-    model = keras.Sequential()
-    model.add(keras.Input(shape=input_shape))
-    model.add(DWT.DWT(name=wave_name))
-    if soft_theshold:
-        model.add(Activation.SureSoftThreshold())
-    model.add(DWT.IDWT(name=wave_name))
 
+def basic_dmwt(input_shape, nb_classes=10, wave_name="ghm", eagerly=False):
+
+    x_input = layers.Input(shape=input_shape)
+    x = DMWT.DMWT(wave_name)(x_input)
+    x = layers.Flatten()(x)
+    x = layers.Dense(nb_classes, activation="softmax")(x)
+    model = Model(x_input, x, name="mymodel")
     # for debug with break points
     model.run_eagerly = eagerly
     return model
+
+
+def basic_dtcwt(input_shape, nb_classes=10, level=2, eagerly=False):
+
+    cplx_input = layers.Input(shape=input_shape)
+    x = DTCWT.DTCWT(level)(cplx_input)
+    x = layers.Flatten()(x)
+    x = layers.Dense(nb_classes, activation="softmax")(x)
+    model = Model(cplx_input, x, name="mymodel")
+    # for debug with break points
+    model.run_eagerly = eagerly
+    return model
+
 
 class AutocodeBasic(Model):
 
