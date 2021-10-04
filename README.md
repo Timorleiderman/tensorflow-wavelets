@@ -20,7 +20,7 @@ import tensorflow_wavelets.Layers.Activation as Activation
 ```
 
 # Examples
-## DWT(name="db2", concat=0)
+## DWT(name="haar", concat=0)
 ### "name" can be found in pywt.wavelist(family)
 ### concat = 0 means to split to 4 smaller layers
 
@@ -48,7 +48,7 @@ model.summary()
     Non-trainable params: 0
     _________________________________________________________________
 
-### concat=1
+### name = "db4" concat = 1
 ```
 
 model = keras.Sequential()
