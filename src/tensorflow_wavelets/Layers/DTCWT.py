@@ -1,15 +1,10 @@
-# import cv2
-# import numpy as np
-from tensorflow.keras import layers, Model
-from utils import filters
-from utils.helpers import *
-from utils.cast import *
+from tensorflow.keras import layers
+from src.tensorflow_wavelets.utils import filters
+from src.tensorflow_wavelets.utils.helpers import *
+from src.tensorflow_wavelets.utils.cast import *
 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-from tensorflow.keras.datasets import mnist, cifar10
-from tensorflow.keras.optimizers import Adam, SGD
-from tensorflow.keras.utils import to_categorical
 
 
 class DTCWT(layers.Layer):
@@ -29,12 +24,12 @@ class DTCWT(layers.Layer):
 
         # Faf - First analysis filter - for the first level
         # Fsf - First synthesis filter
-        Faf, Fsf = filters.FSfarras()
+        faf, fsf = filters.FSfarras()
         af, sf = filters.duelfilt()
 
         # convert to tensor
-        self.Faf = duel_filter_tf(Faf)
-        self.Fsf = duel_filter_tf(Fsf)
+        self.Faf = duel_filter_tf(faf)
+        self.Fsf = duel_filter_tf(fsf)
         self.af = duel_filter_tf(af)
         self.sf = duel_filter_tf(sf)
 
@@ -48,18 +43,20 @@ class DTCWT(layers.Layer):
 
     def call(self, inputs, training=None, mask=None):
 
-        # normalizetion
+        # normalize
         x_norm = tf.math.divide(inputs, 2)
 
         # 2 trees J+1 lists
-        w = [[[[], []] for x in range(2)] for i in range(self.level+1)]
+        w = [[[[], []] for _ in range(2)] for __ in range(self.level+1)]
 
         # 2 trees - 2 filters ( first stage is using differnet filter
         for m in range(2):
             for n in range(2):
-                [lo, w[0][m][n]] = analysis_filter_bank2d(x_norm, self.Faf[m][0], self.Faf[m][1], self.Faf[n][0], self.Faf[n][1])
+                [lo, w[0][m][n]] = analysis_filter_bank2d(x_norm, self.Faf[m][0], self.Faf[m][1],
+                                                          self.Faf[n][0], self.Faf[n][1])
                 for j in range(1, self.level):
-                    [lo, w[j][m][n]] = analysis_filter_bank2d(lo, self.af[m][0], self.af[m][1],self.af[n][0], self.af[n][1])
+                    [lo, w[j][m][n]] = analysis_filter_bank2d(lo, self.af[m][0], self.af[m][1],
+                                                              self.af[n][0], self.af[n][1])
                 w[self.level][m][n] = lo
 
         # add and subtract for the complex
@@ -77,15 +74,23 @@ class DTCWT(layers.Layer):
 
         for j in [x for x in range(1, self.level)][::-1]:
 
-            w_c[j][0][0] = tf.concat([tf.concat([w_c[j+1][0][0], w_c[j][0][0][0]], axis=2), tf.concat([w_c[j][0][0][1], w_c[j][0][0][2]], axis=2)], axis=1)
-            w_c[j][0][1] = tf.concat([tf.concat([w_c[j+1][0][1], w_c[j][0][1][0]], axis=2), tf.concat([w_c[j][0][1][1], w_c[j][0][1][2]], axis=2)], axis=1)
-            w_c[j][1][0] = tf.concat([tf.concat([w_c[j+1][1][0], w_c[j][1][0][0]], axis=2), tf.concat([w_c[j][1][0][1], w_c[j][1][0][2]], axis=2)], axis=1)
-            w_c[j][1][1] = tf.concat([tf.concat([w_c[j+1][1][1], w_c[j][1][1][0]], axis=2), tf.concat([w_c[j][1][1][1], w_c[j][1][1][2]], axis=2)], axis=1)
+            w_c[j][0][0] = tf.concat([tf.concat([w_c[j+1][0][0], w_c[j][0][0][0]], axis=2),
+                                      tf.concat([w_c[j][0][0][1], w_c[j][0][0][2]], axis=2)], axis=1)
+            w_c[j][0][1] = tf.concat([tf.concat([w_c[j+1][0][1], w_c[j][0][1][0]], axis=2),
+                                      tf.concat([w_c[j][0][1][1], w_c[j][0][1][2]], axis=2)], axis=1)
+            w_c[j][1][0] = tf.concat([tf.concat([w_c[j+1][1][0], w_c[j][1][0][0]], axis=2),
+                                      tf.concat([w_c[j][1][0][1], w_c[j][1][0][2]], axis=2)], axis=1)
+            w_c[j][1][1] = tf.concat([tf.concat([w_c[j+1][1][1], w_c[j][1][1][0]], axis=2),
+                                      tf.concat([w_c[j][1][1][1], w_c[j][1][1][2]], axis=2)], axis=1)
 
-        w_0 = tf.concat([tf.concat([w_c[j][0][0], w_c[0][0][0][0]], axis=2), tf.concat([w_c[0][0][0][1], w_c[0][0][0][2]], axis=2)], axis=1)
-        w_1 = tf.concat([tf.concat([w_c[j][0][1], w_c[0][0][1][0]], axis=2), tf.concat([w_c[0][0][1][1], w_c[0][0][1][2]], axis=2)], axis=1)
-        w_2 = tf.concat([tf.concat([w_c[j][1][0], w_c[0][1][0][0]], axis=2), tf.concat([w_c[0][1][0][1], w_c[0][1][0][2]], axis=2)], axis=1)
-        w_3 = tf.concat([tf.concat([w_c[j][1][1], w_c[0][1][1][0]], axis=2), tf.concat([w_c[0][1][1][1], w_c[0][1][1][2]], axis=2)], axis=1)
+        w_0 = tf.concat([tf.concat([w_c[j][0][0], w_c[0][0][0][0]], axis=2),
+                         tf.concat([w_c[0][0][0][1], w_c[0][0][0][2]], axis=2)], axis=1)
+        w_1 = tf.concat([tf.concat([w_c[j][0][1], w_c[0][0][1][0]], axis=2),
+                         tf.concat([w_c[0][0][1][1], w_c[0][0][1][2]], axis=2)], axis=1)
+        w_2 = tf.concat([tf.concat([w_c[j][1][0], w_c[0][1][0][0]], axis=2),
+                         tf.concat([w_c[0][1][0][1], w_c[0][1][0][2]], axis=2)], axis=1)
+        w_3 = tf.concat([tf.concat([w_c[j][1][1], w_c[0][1][1][0]], axis=2),
+                         tf.concat([w_c[0][1][1][1], w_c[0][1][1][2]], axis=2)], axis=1)
 
         w_1234 = tf.concat([tf.concat([w_0, w_1], axis=2), tf.concat([w_2, w_3], axis=2)], axis=1)
         return w_1234
@@ -108,11 +113,11 @@ class IDTCWT(layers.Layer):
 
         # Faf - First analysis filter - for the first level
         # Fsf - First synthesis filter
-        Faf, Fsf = filters.FSfarras()
+        faf, fsf = filters.FSfarras()
         af, sf = filters.duelfilt()
 
-        self.Faf = duel_filter_tf(Faf)
-        self.Fsf = duel_filter_tf(Fsf)
+        self.Faf = duel_filter_tf(faf)
+        self.Fsf = duel_filter_tf(fsf)
         self.af = duel_filter_tf(af)
         self.sf = duel_filter_tf(sf)
 
@@ -135,7 +140,8 @@ class IDTCWT(layers.Layer):
         # init image to be reconstructed
         y = tf.zeros((height, width, inputs.shape[-1]), dtype=tf.float32)
 
-        w_i = [[[[list() for x in range(3)], [list() for x in range(3)]] for x in range(2)] for i in range(self.level+1)]
+        w_i = [[[[list() for _ in range(3)], [list() for _ in range(3)]]
+                for __ in range(2)] for ___ in range(self.level+1)]
 
         # first add and subtract (inverse the transform)
         for j in range(self.level):
@@ -144,13 +150,15 @@ class IDTCWT(layers.Layer):
                 w_i[j][0][0][m], w_i[j][1][1][m] = add_sub(w_rec[j][0][0][m], w_rec[j][1][1][m])
                 w_i[j][0][1][m], w_i[j][1][0][m] = add_sub(w_rec[j][0][1][m], w_rec[j][1][0][m])
 
-        # syntesis with the First filters to be last in the reconstruction
+        # synthesis with the First filters to be last in the reconstruction
         for m in range(2):
             for n in range(2):
                 lo = w_rec[self.level][m][n]
                 for j in [x for x in range(1, self.level)][::-1]:
-                    lo = synthesis_filter_bank2d(lo, w_i[j][m][n], self.sf[m][0], self.sf[m][1], self.sf[n][0], self.sf[n][1])
-                lo = synthesis_filter_bank2d(lo, w_i[0][m][n], self.Fsf[m][0], self.Fsf[m][1], self.Fsf[n][0], self.Fsf[n][1])
+                    lo = synthesis_filter_bank2d(lo, w_i[j][m][n], self.sf[m][0],
+                                                 self.sf[m][1], self.sf[n][0], self.sf[n][1])
+                lo = synthesis_filter_bank2d(lo, w_i[0][m][n], self.Fsf[m][0],
+                                             self.Fsf[m][1], self.Fsf[n][0], self.Fsf[n][1])
                 y = tf.math.add(y, lo)
 
         # revert the normalization
@@ -160,6 +168,10 @@ class IDTCWT(layers.Layer):
 
 if __name__ == "__main__":
     pass
+    # from tensorflow.keras.datasets import mnist, cifar10
+    # from tensorflow.keras.optimizers import Adam, SGD
+    # from tensorflow.keras.utils import to_categorical
+
     # img = cv2.imread("../input/Lenna_orig.png", 0)
     # img_ex1 = np.expand_dims(img, axis=0)
     # #
@@ -207,5 +219,4 @@ if __name__ == "__main__":
     #                     batch_size=32,
     #                     verbose=2,
     #                     )
-
 

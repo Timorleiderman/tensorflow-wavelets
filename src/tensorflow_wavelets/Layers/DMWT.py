@@ -1,20 +1,15 @@
 # Timor Leiderman AUG 2021
-# import cv2
-# import numpy as np
-from tensorflow.keras import layers, Model
-from tensorflow_wavelets.utils import filters
-from tensorflow_wavelets.utils.helpers import *
-from tensorflow_wavelets.utils.cast import *
+
+from tensorflow.keras import layers
+from src.tensorflow_wavelets.utils import filters
+from src.tensorflow_wavelets.utils.helpers import *
+from src.tensorflow_wavelets.utils.cast import *
 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # for tensor flow warning
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-from tensorflow.keras.datasets import mnist, cifar10
-from tensorflow.keras.optimizers import Adam, SGD
-from tensorflow.keras.utils import to_categorical
+
 
 # Discrete MultiWavelet transform Layer
-
-
 class DMWT(layers.Layer):
     """
     Discrete Multi Wavlelets Transform
@@ -24,6 +19,7 @@ class DMWT(layers.Layer):
     def __init__(self, wave_name='ghm', **kwargs):
         super(DMWT, self).__init__(**kwargs)
         self.wave_name = wave_name.lower()
+        self.w_mat = None
 
     def build(self, input_shape):
         # create filter matrix
@@ -58,6 +54,7 @@ class IDMWT(layers.Layer):
     def __init__(self, wave_name='ghm', **kwargs):
         super(IDMWT, self).__init__(**kwargs)
         self.wave_name = wave_name
+        self.w_mat = None
 
     def build(self, input_shape):
         # create filter matrix

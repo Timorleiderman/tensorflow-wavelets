@@ -16,7 +16,6 @@ def basic_dwt_idw(input_shape, wave_name="db2", eagerly=False, soft_theshold=Tru
     if soft_theshold:
         model.add(Activation.SureSoftThreshold())
     model.add(DWT.IDWT(name=wave_name))
-    model.summary()
 
     # for debug with break points
     model.run_eagerly = eagerly

@@ -1,3 +1,5 @@
+# Timor Leiderman 2021 Custom Activation Layer
+
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras import layers
@@ -53,43 +55,42 @@ class SureSoftThreshold(layers.Layer):
         else:
             x = tf.concat([ll, lh, hl, hh_new], axis=-1)
         return x
-        # return inputs
 
 
 if __name__=="__main__":
+    pass
+    # import cv2
+    # from tensorflow.keras import Model
+    # from Layers import DWT
+    # from utils.cast import *
+    # import numpy as np
+    # from utils.mse import mse
 
-    import cv2
-    from tensorflow.keras import Model
-    from Layers import DWT
-    from utils.cast import *
-    import numpy as np
-    from utils.mse import mse
-
-    img = cv2.imread("../../../input/LennaGrey.png", 0)
-
-    sigma_np = np.median(np.abs(img)) / 0.674489
-    threshold_np = sigma_np**2 / np.sqrt(max(img.var()**2 - sigma_np**2, 0))
-
-    inputs = np.expand_dims(img, axis=0)
+    # img = cv2.imread("../../../input/LennaGrey.png", 0)
     #
-    if len(inputs.shape) <= 3:
-        inputs = np.expand_dims(inputs, axis=-1)
+    # sigma_np = np.median(np.abs(img)) / 0.674489
+    # threshold_np = sigma_np**2 / np.sqrt(max(img.var()**2 - sigma_np**2, 0))
+    #
+    # inputs = np.expand_dims(img, axis=0)
+    # #
+    # if len(inputs.shape) <= 3:
+    #     inputs = np.expand_dims(inputs, axis=-1)
+    #
+    # if (inputs.shape[-1] == 1):
+    #     coefs = tf.split(inputs, 2, axis=2)
+    #     HH = tf.split(coefs, 2, axis=1)
 
-    if (inputs.shape[-1] == 1):
-        coefs = tf.split(inputs, 2, axis=2)
-        HH = tf.split(coefs, 2, axis=1)
-
-    inputs = tf.cast(inputs, dtype=tf.float32)
-    med = tfp.stats.percentile(tf.abs(inputs), 50)
-    sigma = tf.math.divide(med, 0.674489)
-    sigma_square = tf.math.square(sigma)
-
-    var1 = tf.experimental.numpy.var(inputs[:, :, :, 3])
-    var_square = tf.math.square(var1)
-
-    denominator = tf.math.sqrt(tf.maximum(tf.math.subtract(var_square, sigma_square), 0))
-    threshold = sigma_square / denominator
-    out = tfp.math.soft_threshold(inputs, threshold)
+    # inputs = tf.cast(inputs, dtype=tf.float32)
+    # med = tfp.stats.percentile(tf.abs(inputs), 50)
+    # sigma = tf.math.divide(med, 0.674489)
+    # sigma_square = tf.math.square(sigma)
+    #
+    # var1 = tf.experimental.numpy.var(inputs[:, :, :, 3])
+    # var_square = tf.math.square(var1)
+    #
+    # denominator = tf.math.sqrt(tf.maximum(tf.math.subtract(var_square, sigma_square), 0))
+    # threshold = sigma_square / denominator
+    # out = tfp.math.soft_threshold(inputs, threshold)
     #
     #
     # print("sigma", sigma, sigma.shape)
