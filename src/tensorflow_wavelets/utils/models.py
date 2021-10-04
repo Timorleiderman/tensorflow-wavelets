@@ -8,13 +8,13 @@ import tensorflow_wavelets.Layers.Activation as Activation
 from tensorflow.keras.models import Model
 
 
-def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, soft_theshold=True):
+def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft'):
     # load DWT IDWT model
     model = keras.Sequential()
     model.add(keras.Input(shape=input_shape))
     model.add(DWT.DWT(name=wave_name))
-    if soft_theshold:
-        model.add(Activation.SureSoftThreshold())
+    if theshold:
+        model.add(Activation.SureThreshold(mode))
     model.add(DWT.IDWT(name=wave_name))
 
     # for debug with break points
