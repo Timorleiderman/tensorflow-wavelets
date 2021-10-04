@@ -34,6 +34,7 @@ def psnr_ed(ref, img):
 
     return psnr_ed
 
+
 def psnr_e(ref, img):
     ref = ref.astype('float64')
     img = img.astype('float64')
@@ -94,8 +95,8 @@ def psnr(ref, img):
 
 
 def main():
-    original = cv2.imread("../input/peppers.png")
-    noise = cv2.imread("../input/peppers_noise.png")
+    original = cv2.imread("../input/Lenna_orig.png")
+    noise = cv2.imread("../input/Lenna_salt_pepper.png")
 
     compressed_10 = cv2.imread("../input/Lenna_comp_10.jpg", 1)
     compressed_100 = cv2.imread("../input/Lenna_comp_100.jpg", 1)
