@@ -74,7 +74,7 @@ model.summary()
 from tensorflow.keras import layers
 x_inp = layers.Input(shape=(512, 512, 1))
 x = DMWT("ghm")(x_inp)
-x = Activation.SureThreshold("hard")(x) # use "soft" or "hard"
+x = Activation.Threshold(algo='sure', mode='hard')(x) # use "soft" or "hard"
 x = IDMWT("ghm")(x)
 model = Model(x_inp, x, name="MyModel")
 model.summary()

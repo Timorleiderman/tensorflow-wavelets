@@ -14,7 +14,7 @@ def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, m
     model.add(keras.Input(shape=input_shape))
     model.add(DWT.DWT(name=wave_name))
     if theshold:
-        model.add(Activation.SureThreshold(mode))
+        model.add(Activation.Threshold(algo='sure', mode=mode))
     model.add(DWT.IDWT(name=wave_name))
 
     # for debug with break points
@@ -83,7 +83,7 @@ class AutocodeBasicDWT(Model):
 
         self.encoder = tf.keras.Sequential([
             DWT.DWT(name=wave_name),
-            Activation.SureSoftThreshold(),
+            Activation.Threshold(),
             DWT.IDWT(name=wave_name),
             layers.Flatten(),
             layers.Dense(latent_dim, activation='relu'),
