@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="tensorflow-wavelets",
-    version="1.0.18",
+    version="1.0.20",
     author="Timor Leiderman",
     author_email="Timorleiderman@gmail.com",
     description="Tensorflow wavelet Layers",
@@ -23,6 +23,7 @@ setuptools.setup(
     keywords = ['Wavelets', 'Tensorflow'],
     install_requires=[            
           'tensorflow',
+          'tensorflow-probability',
           'PyWavelets',
       ],
     package_dir={"": "src"},

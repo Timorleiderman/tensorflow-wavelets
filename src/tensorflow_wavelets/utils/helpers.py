@@ -265,6 +265,14 @@ def upsampler2d(x):
     return us_padded
 
 
+def conv_tr_conv_tr(x, fir1, fir2, pad="VALID"):
+    conv_fir1 = tf.nn.conv2d(x, fir1, padding=pad, strides=[1, 1, 1, 1], )
+    conv_fir1_tr = tf.transpose(conv_fir1, perm=[0, 2, 1, 3])
+    conv_fir1_tr_conv_fir2 = tf.nn.conv2d(conv_fir1_tr, fir2, padding=pad, strides=[1, 1, 1, 1], )
+    conv_fir1_tr_conv_fir2_tr = tf.transpose(conv_fir1_tr_conv_fir2, perm=[0, 2, 1, 3])
+    return conv_fir1_tr_conv_fir2_tr
+
+
 def up_sample_fir(x, fir):
     # create zero like tensor
     x = tf.transpose(x, perm=[0, 2, 1, 3])

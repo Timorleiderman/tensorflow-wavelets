@@ -40,9 +40,9 @@ class DWT(layers.Layer):
     def build(self, input_shape):
         # filter dims should be bigger if input is not gray scale
         if input_shape[-1] != 1:
-            #self.db2_lpf = tf.repeat(self.db2_lpf, input_shape[-1], axis=-1)
+            # self.db2_lpf = tf.repeat(self.db2_lpf, input_shape[-1], axis=-1)
             self.db2_lpf = tf.keras.backend.repeat_elements(self.db2_lpf, input_shape[-1], axis=-1)
-            #self.db2_hpf = tf.repeat(self.db2_hpf, input_shape[-1], axis=-1)
+            # self.db2_hpf = tf.repeat(self.db2_hpf, input_shape[-1], axis=-1)
             self.db2_hpf = tf.keras.backend.repeat_elements(self.db2_hpf, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
@@ -143,10 +143,10 @@ class IDWT(layers.Layer):
             x = inputs
         else:
             ll_lh_hl_hh = tf.split(inputs, 2, axis=1)
-            ll_hl = tf.split(ll_lh_hl_hh[0], 2, axis=2)
-            lh_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
-            ll_lh_conc = tf.concat(ll_hl, axis=-1)
-            hl_hh_conc = tf.concat(lh_hh, axis=-1)
+            ll_lh = tf.split(ll_lh_hl_hh[0], 2, axis=2)
+            hl_hh = tf.split(ll_lh_hl_hh[1], 2, axis=2)
+            ll_lh_conc = tf.concat(ll_lh, axis=-1)
+            hl_hh_conc = tf.concat(hl_hh, axis=-1)
             x = tf.concat([ll_lh_conc, hl_hh_conc], axis=-1)
 
         # border padding for convolution with low pass and high pass filters
@@ -165,8 +165,8 @@ class IDWT(layers.Layer):
         # and expand the dims for the up sampling
 
         ll = tf.expand_dims(x[:, :, :, 0], axis=-1)
-        lh = tf.expand_dims(x[:, :, :, 2], axis=-1)
-        hl = tf.expand_dims(x[:, :, :, 1], axis=-1)
+        lh = tf.expand_dims(x[:, :, :, 1], axis=-1)
+        hl = tf.expand_dims(x[:, :, :, 2], axis=-1)
         hh = tf.expand_dims(x[:, :, :, 3], axis=-1)
 
         ll_us_pad = upsampler2d(ll)
@@ -179,31 +179,14 @@ class IDWT(layers.Layer):
         # convolution for the column
         # transpose back to normal
 
-        ll_conv_lpf = tf.nn.conv2d(ll_us_pad, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        ll_conv_lpf_tr = tf.transpose(ll_conv_lpf, perm=[0, 2, 1, 3])
-        ll_conv_lpf_lpf = tf.nn.conv2d(ll_conv_lpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        ll_conv_lpf_lpf_tr = tf.transpose(ll_conv_lpf_lpf, perm=[0, 2, 1, 3])
-
-        lh_conv_lpf = tf.nn.conv2d(lh_us_pad, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        lh_conv_lpf_tr = tf.transpose(lh_conv_lpf, perm=[0, 2, 1, 3])
-        lh_conv_lpf_hpf = tf.nn.conv2d(lh_conv_lpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        lh_conv_lpf_hpf_tr = tf.transpose(lh_conv_lpf_hpf, perm=[0, 2, 1, 3])
-
-        hl_conv_hpf = tf.nn.conv2d(hl_us_pad, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        hl_conv_hpf_tr = tf.transpose(hl_conv_hpf, perm=[0, 2, 1, 3])
-        hl_conv_hpf_lpf = tf.nn.conv2d(hl_conv_hpf_tr, self.db2_lpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        hl_conv_hpf_lpf_tr = tf.transpose(hl_conv_hpf_lpf, perm=[0, 2, 1, 3])
-
-        hh_conv_hpf = tf.nn.conv2d(hh_us_pad, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        hh_conv_hpf_tr = tf.transpose(hh_conv_hpf, perm=[0, 2, 1, 3])
-        hh_conv_hpf_hpf = tf.nn.conv2d(hh_conv_hpf_tr, self.db2_hpf, padding=self.pad_type, strides=[1, 1, 1, 1], )
-        hh_conv_hpf_hpf_tr = tf.transpose(hh_conv_hpf_hpf, perm=[0, 2, 1, 3])
+        ll_conv_lpf_lpf_tr = conv_tr_conv_tr(ll_us_pad, self.db2_lpf, self.db2_lpf, self.pad_type)
+        lh_conv_lpf_hpf_tr = conv_tr_conv_tr(lh_us_pad, self.db2_hpf, self.db2_lpf, self.pad_type)
+        hl_conv_hpf_lpf_tr = conv_tr_conv_tr(hl_us_pad, self.db2_lpf, self.db2_hpf, self.pad_type)
+        hh_conv_hpf_hpf_tr = conv_tr_conv_tr(hh_us_pad, self.db2_hpf, self.db2_hpf, self.pad_type)
 
         # add all together
-        reconstructed = tf.add_n([ll_conv_lpf_lpf_tr,
-                                  lh_conv_lpf_hpf_tr,
-                                  hl_conv_hpf_lpf_tr,
-                                  hh_conv_hpf_hpf_tr])
+        reconstructed = tf.math.add_n([ll_conv_lpf_lpf_tr, lh_conv_lpf_hpf_tr,
+                                       hl_conv_hpf_lpf_tr, hh_conv_hpf_hpf_tr])
         # crop the paded part
         crop = (self.rec_len - 1)*2
         return reconstructed[:, crop-1:-crop, crop-1:-crop, :]
@@ -287,7 +270,6 @@ if __name__ == "__main__":
     # model.summary()
     #
     #
-
 
     # a = model.predict(frog, steps=1)
     # #
