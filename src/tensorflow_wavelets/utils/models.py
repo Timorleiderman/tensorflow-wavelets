@@ -2,11 +2,12 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflow_wavelets.Layers.DWT as DWT
+import tensorflow_wavelets.Layers.DMWT as DMWT
 import tensorflow_wavelets.Layers.Activation as Activation
 from tensorflow.keras.models import Model
 
 
-def basic_dwt_idw(input_shape, wave_name="db2", eagerly=False, soft_theshold=True):
+def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, soft_theshold=True):
     # load DWT IDWT model
     model = keras.Sequential()
     model.add(keras.Input(shape=input_shape))
@@ -19,6 +20,18 @@ def basic_dwt_idw(input_shape, wave_name="db2", eagerly=False, soft_theshold=Tru
     model.run_eagerly = eagerly
     return model
 
+def basic_dmwt_idmwt(input_shape, wave_name="db2", eagerly=False, soft_theshold=True):
+    # load DWT IDWT model
+    model = keras.Sequential()
+    model.add(keras.Input(shape=input_shape))
+    model.add(DWT.DWT(name=wave_name))
+    if soft_theshold:
+        model.add(Activation.SureSoftThreshold())
+    model.add(DWT.IDWT(name=wave_name))
+
+    # for debug with break points
+    model.run_eagerly = eagerly
+    return model
 
 class AutocodeBasic(Model):
 
