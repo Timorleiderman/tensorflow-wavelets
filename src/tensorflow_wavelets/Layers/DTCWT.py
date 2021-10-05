@@ -24,7 +24,7 @@ class DTCWT(layers.Layer):
 
         # Faf - First analysis filter - for the first level
         # Fsf - First synthesis filter
-        faf, fsf = filters.FSfarras()
+        faf, fsf = filters.fs_farras()
         af, sf = filters.duelfilt()
 
         # convert to tensor
@@ -113,7 +113,7 @@ class IDTCWT(layers.Layer):
 
         # Faf - First analysis filter - for the first level
         # Fsf - First synthesis filter
-        faf, fsf = filters.FSfarras()
+        faf, fsf = filters.fs_farras()
         af, sf = filters.duelfilt()
 
         self.Faf = duel_filter_tf(faf)

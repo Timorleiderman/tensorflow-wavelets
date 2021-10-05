@@ -361,7 +361,7 @@ def duel_filter_tf(duelfilt):
 img_grey = cv2.imread("../input/Lenna_orig.png", 0)
 
 
-[Faf, Fsf] = filters.FSfarras()
+[Faf, Fsf] = filters.fs_farras()
 [af, sf] = filters.duelfilt()
 
 Faf = duel_filter_tf(Faf)

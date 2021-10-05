@@ -1,8 +1,3 @@
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
-from skimage import img_as_float
-from skimage.metrics import mean_squared_error
 from skimage.metrics import structural_similarity
 
 
@@ -12,6 +7,11 @@ def ssim(ref_img, rend_img, data_range=255, multichannel=False):
 
 
 if __name__ == "__main__":
+    import cv2
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from skimage import img_as_float
+    from skimage.metrics import mean_squared_error
     img = cv2.imread("../input/Lenna_orig.png")
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # img = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
@@ -21,7 +21,6 @@ if __name__ == "__main__":
     else:
         rows, cols = img.shape
     img = img_as_float(img)
-
 
     noise = np.ones_like(img) * 0.2 * (img.max() - img.min())
     noise[np.random.random(size=noise.shape) > 0.5] *= -1
