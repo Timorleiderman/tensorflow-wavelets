@@ -16,11 +16,11 @@ class DWT(layers.Layer):
                - 0 - split to 4 channels ( 1 img in -> 4 smaller img out)
     """
 
-    def __init__(self, name='haar', concat=1, **kwargs):
+    def __init__(self, wavelet_name='haar', concat=1, **kwargs):
         super(DWT, self).__init__(**kwargs)
-        self._name = self.name + "_" + name
+        # self._name = self.name + "_" + name
         # get filter coeffs from 3rd party lib
-        wavelet = pywt.Wavelet(name)
+        wavelet = pywt.Wavelet(wavelet_name)
         self.dec_len = wavelet.dec_len
         self.concat = concat
         # decomposition filter low pass and hight pass coeffs
@@ -116,14 +116,14 @@ class IDWT(layers.Layer):
         splited - 0 - not splitted One channel input([[ll , lh],[hl, hh]])
                   0 - splitted 4 channels input([ll , lh, hl ,hh])
     """
-    def __init__(self, name='haar', splited=0, **kwargs):
+    def __init__(self, wavelet_name='haar', splited=0, **kwargs):
         super(IDWT, self).__init__(**kwargs)
-        self._name = self.name + "_" + name
+        # self._name = self.name + "_" + name
         self.pad_type = "VALID"
         self.border_pad = "SYMMETRIC"
         self.splited = splited
         # get filter coeffs from 3rd party lib
-        wavelet = pywt.Wavelet(name)
+        wavelet = pywt.Wavelet(wavelet_name)
         self.rec_len = wavelet.rec_len
 
         # decomposition filter low pass and hight pass coeffs
@@ -194,6 +194,8 @@ class IDWT(layers.Layer):
 
 if __name__ == "__main__":
     pass
+    import cv2
+    from tensorflow import keras
     # (x_train, y_train), (x_test, y_test) = cifar10.load_data()
     # x_train = x_train.astype("float32")
     # x_test = x_test.astype("float32")
@@ -207,17 +209,17 @@ if __name__ == "__main__":
     # model.add(IDWT())
     # model.summary()
 
-    # name = "db2"
-    # img = cv2.imread("../input/LennaGrey.png", 0)
-    # # img = cv2.imread("../input/Lenna_orig.png",0)
-    # img_ex1 = np.expand_dims(img, axis=-1)
-    # img_ex2 = np.expand_dims(img_ex1, axis=0)
+    name = "db2"
+    img = cv2.imread("../../../Development/input/LennaGrey.png", 0)
+    # img = cv2.imread("../input/Lenna_orig.png",0)
+    img_ex1 = np.expand_dims(img, axis=-1)
+    img_ex2 = np.expand_dims(img_ex1, axis=0)
     # # img_ex2 = np.expand_dims(img, axis=0)
     #
-    # model = keras.Sequential()
-    # model.add(layers.InputLayer(input_shape=img_ex1.shape))
-    # model.add(DWT(name=name, concat=0))
-    # model.summary()
+    model = keras.Sequential()
+    model.add(layers.InputLayer(input_shape=(28, 28, 1)))
+    model.add(DWT(name="db4", concat=1))
+    model.summary()
     # coeffs = model.predict(img_ex2)
     # _, w_coef, h_coef, c_coef = coeffs.shape
 

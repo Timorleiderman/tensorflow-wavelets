@@ -83,21 +83,34 @@ class IDMWT(layers.Layer):
 
 
 if __name__ == "__main__":
-    pass
-    # img = cv2.imread("../input/LennaGrey.png", 0)
-    # img_ex1 = np.expand_dims(img, axis=0)
-    # #
-    # if len(img_ex1.shape) <= 3:
-    #     img_ex1 = np.expand_dims(img_ex1, axis=-1)
-    #
-    #
+
+    import cv2
+    from tensorflow.keras import Model
+    from tensorflow_wavelets.Layers import DWT
+    from tensorflow_wavelets.Layers.Activation import *
+    from tensorflow_wavelets.utils.cast import *
+    import numpy as np
+    from tensorflow_wavelets.utils.mse import mse
+
+    img = cv2.imread("../../../Development/input/LennaGrey.png", 0)
+    img_ex1 = np.expand_dims(img, axis=0)
+    img_ex1 = np.expand_dims(img_ex1, axis=-1)
+
     # _, h, w, c = img_ex1.shape
-    # x_inp = layers.Input(shape=(h, w, c))
-    # x = DMWT("ghm")(x_inp)
-    # model = Model(x_inp, x, name="mymodel")
-    # model.summary()
-    #
-    # out = model.predict(img_ex1)
+    h, w, c = 512, 512, 1
+    x_inp = layers.Input(shape=(h, w, c))
+    x = DMWT("ghm")(x_inp)
+    x = Threshold(algo='1', mode="hard")(x)
+    x = IDMWT("ghm")(x)
+    model = Model(x_inp, x, name="MyModel")
+    model.summary()
+    model.run_eagerly = True
+
+    out = model.predict(img_ex1)
+    print(mse(img, out[0, ..., 0]))
+    cv2.imshow("orig", out[0, ..., 0].astype("uint8"))
+    cv2.waitKey(0)
+
     #
     # out_l = tf_rgb_to_ndarray(out*2)
     # out1 = cast_like_matlab_uint8_2d_rgb(out_l)
