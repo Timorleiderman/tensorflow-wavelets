@@ -1,7 +1,7 @@
-tensorflow-wavelets is an implementation of
+tensorflow-wavelets is an implementation of Custom Layers for Neural Networks:
 - *Discrete Wavelets Transform Layer*
 - *Duel Tree Complex Wavelets Transform Layer*
-- *Multi Wavelets Transform Neural Networks Layer*
+- *Multi Wavelets Transform Layer*
 
 
 ## Installation
