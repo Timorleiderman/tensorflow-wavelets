@@ -11,7 +11,8 @@ logs
 *.gif
 output/*
 *.mat
-!input/LennaGrey.png
+!Development/input/LennaGrey.png
+!Development/input/Lenna_orig.png
 dist/*
 venv/*
 *.egg-info*
