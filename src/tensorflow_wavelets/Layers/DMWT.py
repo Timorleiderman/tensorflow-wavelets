@@ -16,9 +16,9 @@ class DMWT(layers.Layer):
     Input: wave_name - name of the Wavele Filters (ghm, dd2)
     TODO: add support for more wavelets
     """
-    def __init__(self, wave_name='ghm', **kwargs):
+    def __init__(self, wavelet_name='ghm', **kwargs):
         super(DMWT, self).__init__(**kwargs)
-        self.wave_name = wave_name.lower()
+        self.wave_name = wavelet_name.lower()
         self.w_mat = None
 
     def build(self, input_shape):

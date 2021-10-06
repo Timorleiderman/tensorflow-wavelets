@@ -8,14 +8,14 @@ import tensorflow_wavelets.Layers.Threshold as Activation
 from tensorflow.keras.models import Model
 
 
-def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft'):
+def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft', algo='sure'):
     # load DWT IDWT model
     model = keras.Sequential()
     model.add(keras.Input(shape=input_shape))
-    model.add(DWT.DWT(name=wave_name))
+    model.add(DWT.DWT(wavelet_name=wave_name))
     if theshold:
-        model.add(Activation.Threshold(algo='sure', mode=mode))
-    model.add(DWT.IDWT(name=wave_name))
+        model.add(Activation.Threshold(algo=algo, mode=mode))
+    model.add(DWT.IDWT(wavelet_name=wave_name))
 
     # for debug with break points
     model.run_eagerly = eagerly
@@ -25,7 +25,7 @@ def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, m
 def basic_dmwt(input_shape, nb_classes=10, wave_name="ghm", eagerly=False):
 
     x_input = layers.Input(shape=input_shape)
-    x = DMWT.DMWT(wave_name)(x_input)
+    x = DMWT.DMWT(wavelet_name=wave_name)(x_input)
     x = layers.Flatten()(x)
     x = layers.Dense(nb_classes, activation="softmax")(x)
     model = Model(x_input, x, name="mymodel")
@@ -82,9 +82,9 @@ class AutocodeBasicDWT(Model):
         self.latent_dim = latent_dim
 
         self.encoder = tf.keras.Sequential([
-            DWT.DWT(name=wave_name),
+            DWT.DWT(wavelet_name=wave_name),
             Activation.Threshold(),
-            DWT.IDWT(name=wave_name),
+            DWT.IDWT(wavelet_name=wave_name),
             layers.Flatten(),
             layers.Dense(latent_dim, activation='relu'),
         ])

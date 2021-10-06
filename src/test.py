@@ -20,21 +20,10 @@ class TestSrc(unittest.TestCase):
         img = cv2.imread("../Development/input/LennaGrey.png", 0)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, soft_theshold=True)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
-        mse_lim = 0.072
-        self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
-
-    def test_dwt_idwt_sof_thresh(self):
-
-        img = cv2.imread("../Development/input/LennaGrey.png", 0)
-        img_ex1 = np.expand_dims(img, axis=-1)
-        img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft')
-        rec = model.predict(img_ex2)
-        rec = rec[0, ..., 0]
-        mse_lim = 0.072
+        mse_lim = 3.5
         self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
 
     def test_dwt_idwt_hard_thresh(self):
@@ -42,10 +31,10 @@ class TestSrc(unittest.TestCase):
         img = cv2.imread("../Development/input/LennaGrey.png", 0)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard')
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
-        mse_lim = 2
+        mse_lim = 3.5
         self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
 
     def test_dwt_idwt(self):
@@ -64,7 +53,7 @@ class TestSrc(unittest.TestCase):
 
         model = AutocodeBasicDWT(latent_dim=64, width=28, height=28)
         model.compile(optimizer='adam', loss="mse")
-        model.fit(x_train, x_train, epochs=1, shuffle=True, validation_data=(x_test, x_test))
+        model.fit(x_train, x_train, epochs=1, shuffle=True, validation_data=(x_test, x_test), verbose=1)
 
         encoded_imgs = model.encoder(x_test).numpy()
         decoded_imgs = model.decoder(encoded_imgs).numpy()
@@ -76,8 +65,8 @@ class TestSrc(unittest.TestCase):
         input_shape = (28, 28, 1)
         model = basic_dmwt(input_shape=input_shape, nb_classes=10, wave_name="ghm", eagerly=True)
         model.compile(loss="categorical_crossentropy",optimizer='adam', metrics=["accuracy"])
-        model.fit(x_train, y_train, validation_split=0.2, epochs=20, batch_size=32, verbose=2,)
-        test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
+        model.fit(x_train, y_train, validation_split=0.2, epochs=20, batch_size=32, verbose=1,)
+        test_loss, test_acc = model.evaluate(x_test, y_test, verbose=1)
         self.assertGreater(test_acc, 0.8, "test accuracy should be higher then 0.8")
         self.assertLess(test_loss, 0.8, "test loss should be less then 0.8")
 
@@ -85,12 +74,11 @@ class TestSrc(unittest.TestCase):
         (x_train, y_train), (x_test, y_test) = load_mnist(remove_n_samples=1000)
         input_shape = (28, 28, 1)
         model = basic_dtcwt(input_shape=input_shape, nb_classes=10, level=2, eagerly=True)
-        model.compile(loss="categorical_crossentropy",optimizer='adam', metrics=["accuracy"])
-        model.fit(x_train, y_train, validation_split=0.2, epochs=20, batch_size=32, verbose=2,)
-        test_loss, test_acc = model.evaluate(x_test, y_test, verbose=2)
+        model.compile(loss="categorical_crossentropy", optimizer='adam', metrics=["accuracy"])
+        model.fit(x_train, y_train, validation_split=0.2, epochs=20, batch_size=32, verbose=1,)
+        test_loss, test_acc = model.evaluate(x_test, y_test, verbose=1)
         self.assertGreater(test_acc, 0.8, "test accuracy should be higher then 0.8")
         self.assertLess(test_loss, 0.8, "test loss should be less then 0.8")
-
 
 
 if __name__ == '__main__':
