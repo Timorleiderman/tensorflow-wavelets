@@ -11,7 +11,7 @@ from tensorflow.keras.models import Model
 def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft', algo='sure'):
     # load DWT IDWT model
     model = keras.Sequential()
-    model.add(layers.InputLayer(shape=input_shape))
+    model.add(layers.InputLayer(input_shape=input_shape))
     model.add(DWT.DWT(wavelet_name=wave_name))
     if theshold:
         model.add(Activation.Threshold(algo=algo, mode=mode))
@@ -24,7 +24,7 @@ def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, m
 
 def basic_dmwt(input_shape, nb_classes=10, wave_name="ghm", eagerly=False):
 
-    x_input = layers.InputLayer(shape=input_shape)
+    x_input = keras.Input(shape=input_shape)
     x = DMWT.DMWT(wavelet_name=wave_name)(x_input)
     x = layers.Flatten()(x)
     x = layers.Dense(nb_classes, activation="softmax")(x)
@@ -36,7 +36,7 @@ def basic_dmwt(input_shape, nb_classes=10, wave_name="ghm", eagerly=False):
 
 def basic_dtcwt(input_shape, nb_classes=10, level=2, eagerly=False):
 
-    cplx_input = layers.InputLayer(shape=input_shape)
+    cplx_input = keras.Input(shape=input_shape)
     x = DTCWT.DTCWT(level)(cplx_input)
     x = layers.Flatten()(x)
     x = layers.Dense(nb_classes, activation="softmax")(x)
