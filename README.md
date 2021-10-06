@@ -16,7 +16,7 @@ import tensorflow_wavelets.Layers.DTCWT as DTCWT
 import tensorflow_wavelets.Layers.DMWT as DMWT
 
 # Custom Activation function Layer
-import tensorflow_wavelets.Layers.Activation as Activation
+import tensorflow_wavelets.Layers.Threshold as Threshold
 ```
 
 # Examples
@@ -69,12 +69,12 @@ model.summary()
     _________________________________________________________________
 
 # DMWT
-### functional example with SureThreshold Activation
+### functional example with Sure Threshold
 ```
 from tensorflow.keras import layers
 x_inp = layers.Input(shape=(512, 512, 1))
 x = DMWT("ghm")(x_inp)
-x = Activation.Threshold(algo='sure', mode='hard')(x) # use "soft" or "hard"
+x = Threshold.Threshold(algo='sure', mode='hard')(x) # use "soft" or "hard"
 x = IDMWT("ghm")(x)
 model = Model(x_inp, x, name="MyModel")
 model.summary()

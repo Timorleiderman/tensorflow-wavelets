@@ -87,7 +87,7 @@ if __name__ == "__main__":
     import cv2
     from tensorflow.keras import Model
     from tensorflow_wavelets.Layers import DWT
-    from tensorflow_wavelets.Layers.Activation import *
+    from tensorflow_wavelets.Layers.Threshold import *
     from tensorflow_wavelets.utils.cast import *
     import numpy as np
     from tensorflow_wavelets.utils.mse import mse

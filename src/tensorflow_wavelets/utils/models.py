@@ -4,7 +4,7 @@ from tensorflow.keras import layers
 import tensorflow_wavelets.Layers.DWT as DWT
 import tensorflow_wavelets.Layers.DMWT as DMWT
 import tensorflow_wavelets.Layers.DTCWT as DTCWT
-import tensorflow_wavelets.Layers.Activation as Activation
+import tensorflow_wavelets.Layers.Threshold as Activation
 from tensorflow.keras.models import Model
 
 
