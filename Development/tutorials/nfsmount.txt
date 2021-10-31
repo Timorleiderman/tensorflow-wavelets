@@ -1,0 +1,7 @@
+sudo apt install nfs-common
+sudo mount -t nfs 10.10.0.10:/backups /var/backups
+
+-> /etc/fstab
+10.10.0.10:/backups /var/backups  nfs      defaults    0       0
+
+mount /var/backups || <- or -> || mount 10.10.0.10:/backups

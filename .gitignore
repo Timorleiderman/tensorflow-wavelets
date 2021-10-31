@@ -2,7 +2,6 @@
 *.h5
 .idea
 logs
-*.txt
 !requirements.txt
 .ipynb_checkpoints
 *__pycache__*

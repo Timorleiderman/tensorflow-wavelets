@@ -1,0 +1,9 @@
+conda create -n myenv python=3.8
+conda install -c conda-forge tensorflow
+conda install -c anaconda ipykernel
+python -m ipykernel install --user --name=myenv
+
+run->
+jupyter notebook --no-browser --port=8080
+tunnel->
+ssh -L 8080:localhost:<PORT> <REMOTE_USER>@<REMOTE_HOST>
