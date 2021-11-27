@@ -13,11 +13,18 @@ from tensorflow_wavelets.utils.data import *
 # conda install -c conda-forge opencv
 
 
+# unitests for Development 
 class TestSrc(unittest.TestCase):
+    '''
+        run from src dir.
+        if not change the path of lenna_input_path
+    '''
+    lenna_input_path = "../Development/input/LennaGrey.png"
 
     def test_dwt_idwt_sof_thresh(self):
 
-        img = cv2.imread("../Development/input/LennaGrey.png", 0)
+        img = cv2.imread(self.lenna_input_path, 0)
+        self.assertIsNotNone(img, "LennaGrey.png not flound in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
         model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
@@ -28,7 +35,8 @@ class TestSrc(unittest.TestCase):
 
     def test_dwt_idwt_hard_thresh(self):
 
-        img = cv2.imread("../Development/input/LennaGrey.png", 0)
+        img = cv2.imread(self.lenna_input_path, 0)
+        self.assertIsNotNone(img, "LennaGrey.png not flound in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
         model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard', algo='sure')
@@ -39,7 +47,8 @@ class TestSrc(unittest.TestCase):
 
     def test_dwt_idwt(self):
 
-        img = cv2.imread("../Development/input/LennaGrey.png", 0)
+        img = cv2.imread(self.lenna_input_path, 0)
+        self.assertIsNotNone(img, "LennaGrey.png not flound in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
         model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False)

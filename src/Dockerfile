@@ -8,3 +8,8 @@ RUN pip3 install tensorflow
 RUN pip3 install --upgrade tensorflow-probability
 RUN pip3 install PyWavelets
 RUN pip3 install psnr-hvsm
+
+WORKDIR /workspaces 
+RUN git clone https://github.com/RenYang-home/OpenDVC.git
+
+ENV PYTHONPATH /workspace/tensorflow_wavelets/src
