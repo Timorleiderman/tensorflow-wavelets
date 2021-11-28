@@ -18,3 +18,4 @@ venv/*
 Development/output/*
 *.jpg
 *.zip
+Development/OpenDVC/OpenDVC_model/*
