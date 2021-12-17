@@ -18,7 +18,8 @@
 		"ms-python.python",
 		"donjayamanne.python-environment-manager",
 		"yzhang.markdown-all-in-one"
-	]
-
+	],
+	
+	"runArgs": ["--privileged=true"]
 
 }

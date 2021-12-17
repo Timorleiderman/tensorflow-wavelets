@@ -50,7 +50,7 @@ batch_size = 4
 lr_init = 1e-4
 l = 256
 
-folder = np.load("/DataSets/folder.npy")
+folder = np.load("/workspaces/tensorflow-wavelets/Development/OpenDVC/vimeo_npy.py")
 
 Y0_com_img_tf = tf.convert_to_tensor(Y0_com_img, dtype=tf.float32)
 Y1_raw_img_tf = tf.convert_to_tensor(Y1_raw_img, dtype=tf.float32)
