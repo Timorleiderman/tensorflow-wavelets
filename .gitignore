@@ -20,3 +20,4 @@ Development/output/*
 *.zip
 Development/OpenDVC/OpenDVC_model/*
 *.bin
+*.npy
