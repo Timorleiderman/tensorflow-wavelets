@@ -61,23 +61,19 @@ Y1_raw_img_tf = tf.convert_to_tensor(Y1_raw_img, dtype=tf.float32)
 vt, loss_0, loss_1, loss_2, loss_3, loss_4 = motion.optical_flow(Y0_com_img_tf, Y1_raw_img_tf, 1, h, w)
 # (1, 240, 416, 2) -> x,y for motion vectors 
 
-# MV encoder
+# MV encoder input from optical flow
 mt = motion.encoder(vt, num_filters=128, kernel_size=3, M=128)
 # (1, 15, 26, 128)
 
-# EntropyBottleneck replacement
-# entropy_bottleneck_res = tfc.EntropyBottleneck()
-# string_res = entropy_bottleneck_res.compress(res_latent)
-# testing ContinuousIndexedEntropyModel
+# Entropy bottelneck
 noisy = tfc.NoisyNormal(loc=.5, scale=8.)
 entropy_quantizer_mv = tfc.ContinuousBatchedEntropyModel(noisy, 1, compression=True)
-
 string_mv = entropy_quantizer_mv.compress(mt)
 # (1, 15, 16)
-
 string_mv = tf.squeeze(string_mv, axis=0)
 #  (15, 16)
 
+# mt_hat and mv_likelihood is like bits
 mt_hat, MV_likelihoods = entropy_quantizer_mv(mt, training=True)
 #(1,15,26,128), (1, 15, 26)
 
@@ -94,7 +90,6 @@ Y1_MC = motion.MotionCompensation(MC_input)
 
 Res = Y1_raw_img_tf - Y1_MC
 # (1, 240, 416, 3)
-
 
 res_latent = motion.encoder(Res, num_filters=128, kernel_size=5, M=128)
 
@@ -125,6 +120,15 @@ train_loss_total = l * total_mse + (train_bpp_MV + train_bpp_Res)
 train_loss_MV = l * warp_mse + train_bpp_MV
 train_loss_MC = l * MC_mse + train_bpp_MV
 
+
+train_MV = tf.optimizers.Adam(learning_rate=lr_init) # .minimize(train_loss_MV)
+train_MC = tf.optimizers.Adam(learning_rate=lr_init) #.minimize(train_loss_MC)
+train_total = tf.optimizers.Adam(learning_rate=lr_init) #.minimize(train_loss_total)
+
+
+@tf.function
+def train_step(images):
+      pass
 # data = tf.image.convert_image_dtype(Y1_com[0, ..., :], dtype=tf.uint8)
 # cv2.imwrite("/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass_com/data_out.png", data.numpy())
 # bpp = (2 + len(string_mv) + len(string_res)) * 8 / h / w

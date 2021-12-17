@@ -4,6 +4,13 @@ tensorflow-wavelets is an implementation of Custom Layers for Neural Networks:
 - *Multi Wavelets Transform Layer*
 
 
+
+# 
+```
+git clone https://github.com/Timorleiderman/tensorflow-wavelets.git
+cd tensorflow-wavelets
+git submodule update --init --recursive
+```
 ## Installation
 
 ```

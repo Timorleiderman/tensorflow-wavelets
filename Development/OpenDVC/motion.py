@@ -32,7 +32,7 @@ def loss(flow_course, im1, im2):
     return loss_layer, flow_fine
 
 
-def optical_flow(im1_4, im2_4,bach, h, w):
+def optical_flow(im1_4, im2_4, bach, h, w):
 
     im1_3 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_4)
     im1_2 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_3)
