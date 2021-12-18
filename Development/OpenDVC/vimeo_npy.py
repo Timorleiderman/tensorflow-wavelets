@@ -43,7 +43,7 @@ def find(pattern, path):
             if fnmatch.fnmatch(name, pattern):
                 result.append(root)
                 encode_decode_bpg(root)
-                sys.stdout.write('\r'+root + "decoded and encoded")
+                sys.stdout.write('\r'+root + " ... decoded and encoded")
     return result
 
 folder = find('im1.png', '/mnt/WindowsDev/DataSets/vimeo_septuplet/sequences/')
