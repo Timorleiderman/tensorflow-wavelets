@@ -5,7 +5,7 @@ import numpy as np
 def load_local_data(data, frames, bach_size, height, width, channels, folder):
     for bch in range(bach_size):
         path = folder[np.random.randint(len(folder))] + '/'
-        bb = np.random.randint(0, 447 - 256)
+        bb = np.random.randint(0,  415-240)
         for f in range(frames):
             img = imageio.imread(path + 'f' + str(f + 1).zfill(3) + '.png')
             data[f, bch, 0 : height, 0 : width, 0 : channels] = img[0 : height, bb : bb + width, 0 : channels]
