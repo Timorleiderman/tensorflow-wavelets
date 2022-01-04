@@ -1,3 +1,4 @@
+from tensorflow._api.v2 import train
 import tensorflow_compression as tfc
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -50,14 +51,33 @@ data - load.load_local_data(data, frames, batch_size, Height, Width, Channels, f
 
 checkpoint = tf.train.Checkpoint(optimizer=train_opt, model=model)
 
-with tf.GradientTape() as tape:
-    predictions, likelihoods = model(data[0], training=True)
-    train_bpp = tf.math.reduce_sum(tf.math.log(likelihoods)) / (-np.log(2) * Height * Width * batch_size)
-    total_mse = tf.math.reduce_mean(tf.math.squared_difference(data[0], predictions))
-    train_loss_total = 256 * total_mse + train_bpp
+def train_step(model, data, optimizer):
+    with tf.GradientTape() as tape:
+        predictions, likelihoods = model(data, training=True)
+        train_bpp = tf.math.reduce_sum(tf.math.log(likelihoods)) / (-np.log(2) * Height * Width * batch_size)
+        total_mse = tf.math.reduce_mean(tf.math.squared_difference(data, predictions))
+        train_loss_total = 256 * total_mse + train_bpp
+    variables = model.trainable_variables
+    gradients = tape.gradient(train_loss_total, variables)
+    optimizer.apply_gradients(zip(gradients, variables))
+    return train_loss_total
 
-gradients = tape.gradient(train_loss_total, model.trainable_variables)
-train_opt.apply_gradients(zip(gradients, model.trainable_variables))
+
+for epoch in range(frames):
+    loss_value = train_step(model, data[epoch], train_opt)
+
+    # Log every 200 batches.
+    if epoch % 1 == 0:
+        print("Training loss (for one batch) at step %d: %.4f" % (epoch, float(loss_value)))
+        print("Seen so far: %s samples" % ((epoch + 1) * batch_size))
+    # with tf.GradientTape() as tape:
+    #     predictions, likelihoods = model(data[epoch], training=True)
+    #     train_bpp = tf.math.reduce_sum(tf.math.log(likelihoods)) / (-np.log(2) * Height * Width * batch_size)
+    #     total_mse = tf.math.reduce_mean(tf.math.squared_difference(data[epoch], predictions))
+    #     train_loss_total = 256 * total_mse + train_bpp
+
+    # gradients = tape.gradient(train_loss_total, model.trainable_variables)
+    # train_opt.apply_gradients(zip(gradients, model.trainable_variables))
 
 print("Hey, ...")
 
