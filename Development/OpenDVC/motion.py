@@ -40,7 +40,7 @@ def loss(flow_course, im1, im2):
     return loss_layer, flow_fine
 
 
-def optical_flow(im1_4, im2_4, bach, h, w):
+def optical_flow(im1_4, im2_4, bach):
 
     im1_3 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_4)
     im1_2 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_3)
@@ -53,7 +53,8 @@ def optical_flow(im1_4, im2_4, bach, h, w):
     im2_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_1)
 
     # print(bach)
-    flow_zero = tf.zeros((bach, h//16, w//16, 2), dtype=tf.dtypes.float32)
+    flow_zero = tf.zeros((bach, im1_0.shape[1], im1_0.shape[2], 2), dtype=tf.float32)
+    # flow_zero = tf.zeros_like(im1_0)
     # flow_zero = tf.zeros_like(im2_0)
 
     loss_0, flow_0 = loss(flow_zero, im1_0, im2_0)
