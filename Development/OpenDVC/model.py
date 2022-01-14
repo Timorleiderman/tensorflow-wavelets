@@ -333,5 +333,5 @@ if __name__ == "__main__":
 
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
-    model.fit(data, epochs=15, verbose=4, )    
+    model.fit(data, epochs=15, verbose=1, )    
    
