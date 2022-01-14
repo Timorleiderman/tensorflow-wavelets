@@ -5,6 +5,164 @@ import motion
 import numpy as np
 import load
 
+from tensorflow.keras.layers import AveragePooling2D, Conv2D
+
+tf.executing_eagerly()
+
+
+
+class ResBlock(tf.keras.layers.Layer):
+    def __init__(self, IC, OC, name, **kwargs):
+        super(ResBlock, self).__init__(**kwargs)
+
+        self.residual = tf.keras.Sequential([
+            Conv2D(filters=np.minimum(IC, OC), 
+                    kernel_size=3, strides=1,
+                    padding='same', 
+                    kernel_initializer=tf.keras.initializers.GlorotUniform(), 
+                    activation='relu',
+                    name=name + 'l1'),
+            Conv2D(filters=OC,
+                    kernel_size=3, 
+                    strides=1,
+                    padding='same',
+                    kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                    activation='relu',
+                    name=name + 'l2')
+                    ])
+    def call(self, inputs, training=None, mask=None):
+        return self.residual(inputs)
+
+
+
+
+class MotionCompensation(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(MotionCompensation, self).__init__(**kwargs)
+
+        self.m1 = Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
+                            kernel_initializer=tf.keras.initializers.GlorotUniform(), name='mc1')
+
+        self.m2 = ResBlock(64, 64, name='mc2')
+
+        self.m3 = AveragePooling2D(pool_size=2, strides=2, padding='same')
+
+        self.m4 = ResBlock(64, 64, name='mc4')
+
+        self.m5 = AveragePooling2D(pool_size=2, strides=2, padding='same')
+
+        self.m6 = ResBlock(64, 64, name='mc6')
+
+        self.m7 = ResBlock(64, 64, name='mc7')
+
+        self.m9 = ResBlock(64, 64, name='mc9')
+
+        self.m11 = ResBlock(64, 64, name='mc11')
+
+        self.m12 = Conv2D(filters=64, kernel_size=3, strides=1, padding='same',
+                            kernel_initializer=tf.keras.initializers.GlorotUniform(), name='mc12', activation='relu')
+
+        self.m13 = Conv2D(filters=3, kernel_size=3, strides=1, padding='same',
+                            kernel_initializer=tf.keras.initializers.GlorotUniform(), name='mc13', activation='relu')
+
+    def call(self, inputs, training=None, mask=None):
+
+        m1 = self.m1(inputs)
+        m2 = self.m2(m1)
+        m3 = self.m3(m2)
+        m4 = self.m4(m3)
+        m5 = self.m5(m4)
+        m6 = self.m6(m5)
+        m7 = self.m7(m6)
+
+        m8 = tf.image.resize(m7, [2 * tf.shape(m7)[1], 2 * tf.shape(m7)[2]])
+        m8 = m4 + m8
+        m9 = self.m9(m8)
+
+        m10 = tf.image.resize(m9, [2 * tf.shape(m9)[1], 2 * tf.shape(m9)[2]])
+
+        m10 = m2 + m10
+        m11 = self.m11(m10)
+        m12 = self.m12(m11)
+        return self.m13(m12)
+
+
+
+class OpticalFlowConvert(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(OpticalFlowConvert, self).__init__(**kwargs)
+        self.converter = tf.keras.Sequential([
+            Conv2D(filters=32, kernel_size=(7, 7), padding="same", activation='relu'),
+            Conv2D(filters=64, kernel_size=(7, 7), padding="same", activation='relu'),
+            Conv2D(filters=32, kernel_size=(7, 7), padding="same", activation='relu'),
+            Conv2D(filters=16, kernel_size=(7, 7), padding="same", activation='relu'),
+            Conv2D(filters=2, kernel_size=(7, 7), padding="same", activation='relu')
+            ])
+
+
+    def call(self, inputs, training=None, mask=None):
+        # input = tf.concat([im1_warp, im2, flow], axis=-1)
+        res = self.converter(inputs)
+
+        return res
+
+class OpticalFlowLoss(tf.keras.layers.Layer):
+    def __init__(self, **kwargs):
+        super(OpticalFlowLoss, self).__init__(**kwargs)
+        self.convert = OpticalFlowConvert()
+
+    def call(self, inputs, training=None, mask=None):
+        flow_course = inputs[0]
+        im1 = inputs[1]
+        im2 = inputs[2]
+
+        flow = tf.image.resize(flow_course, [tf.shape(im1)[1], tf.shape(im2)[2]])
+        im1_warped = tf.keras.layers.Lambda(lambda a: tfa.image.dense_image_warp(a[0], a[1]))((im1, flow))
+        convnet_input = tf.concat([im1_warped, im2, flow], axis=-1)
+        res = self.convert(convnet_input)
+
+        flow_fine = res + flow
+        im1_warped_fine = tf.keras.layers.Lambda(lambda a: tfa.image.dense_image_warp(a[0], a[1]))((im1, flow_fine))
+        loss_layer = tf.math.reduce_mean(tf.math.squared_difference(im1_warped_fine, im2))
+
+        return loss_layer, flow_fine
+
+class OpticalFlow(tf.keras.layers.Layer):
+    """ 
+    """
+    def __init__(self, **kwargs):
+        super(OpticalFlow, self).__init__(**kwargs)
+        self.optic_loss = OpticalFlowLoss()
+
+    def build(self, input_shape):
+        # create filter matrix
+        self.batch_size = 4
+
+    def call(self, inputs, training=None, mask=None):
+        
+        im1_4 = inputs[0]
+        im2_4 = inputs[1]
+        im1_3 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_4)
+        im1_2 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_3)
+        im1_1 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_2)
+        im1_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_1)
+
+        im2_3 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_4)
+        im2_2 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_3)
+        im2_1 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_2)
+        im2_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_1)
+        
+        flow_zero = tf.zeros((4, im1_0.shape[1], im1_0.shape[2], 2), dtype=tf.float32)
+        
+        loss_0, flow_0 = self.optic_loss([flow_zero, im1_0, im2_0])
+        loss_1, flow_1 = self.optic_loss([flow_0, im1_1, im2_1])
+        loss_2, flow_2 = self.optic_loss([flow_1, im1_2, im2_2])
+        loss_3, flow_3 = self.optic_loss([flow_2, im1_3, im2_3])
+        loss_4, flow_4 = self.optic_loss([flow_3, im1_4, im2_4])
+
+        return flow_4
+
+
 class AnalysisTransform(tf.keras.Sequential):
   """The analysis transform."""
 
@@ -36,7 +194,8 @@ class OpenDVC(tf.keras.Model):
         self.res_synthesis_transform = SynthesisTransform(num_filters, kernel_size=5, M=3)
         self.prior = tfc.NoisyDeepFactorized(batch_shape=(num_filters,))
         
-
+        self.optical_flow = OpticalFlow()
+        self.motion_comensation = MotionCompensation()
         self.width = width
         self.height = height
         self.batch_size = batch_size
@@ -56,14 +215,18 @@ class OpenDVC(tf.keras.Model):
 
         # optical flow
         
-        flow_tensor = motion.optical_flow(Y0_com, Y1_raw, self.batch_size)
+        # flow_tensor = motion.optical_flow(Y0_com, Y1_raw, self.batch_size)
+        flow_tensor = self.optical_flow([Y0_com, Y1_raw])
+        # flow_tensor =  tf.keras.layers.Conv2D(filters=2, kernel_size=[7, 7], padding="same", activation=tf.nn.relu)(Y0_com)
         flow_latent = self.mv_analysis_transform(flow_tensor)
         flow_latent_hat, MV_likelihoods_bits = entropy_model_mv(flow_latent, training=training)
         flow_hat = self.mv_synthesis_transform(flow_latent_hat)
 
         Y1_warp = tfa.image.dense_image_warp(Y0_com, flow_hat )
+
         MC_input = tf.concat([flow_hat, Y0_com, Y1_warp], axis=-1)
-        Y1_MC = motion.MotionCompensation(MC_input)
+
+        Y1_MC = self.motion_comensation(MC_input)
 
         Res = Y1_raw - Y1_MC
 
@@ -85,15 +248,18 @@ class OpenDVC(tf.keras.Model):
         train_loss_MV = self.l * warp_mse + train_bpp_MV
         train_loss_MC = self.l * MC_mse + train_bpp_MV
 
-        return train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr
+        return  train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr
 
     def train_step(self, x):
+        print("Train step")
         with tf.GradientTape() as tape:
             train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
+        
         variables = self.trainable_variables
-        gradients = tape.gradient(train_loss_total, variables)
 
-        # self.train_MV_opt.apply_gradients(zip(gradients, variables))
+        gradients = tape.gradient(train_loss_total, variables)
+        print(gradients)
+        self.train_MV_opt.apply_gradients(zip(gradients, variables))
 
         # self.train_loss_total.update_state(train_loss_total)
         # self.train_loss_MV.update_state(train_loss_MV)
@@ -149,7 +315,7 @@ class OpenDVC(tf.keras.Model):
 if __name__ == "__main__":
     print("gg")
     model = OpenDVC()
-    # model.summary()
+    model.summary()
     model.compile()
 
     import load
@@ -161,10 +327,10 @@ if __name__ == "__main__":
     Width = 240
     Channel = 3
     lr_init = 1e-4
-    frames=2
+    frames=20
     I_QP=27
 
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
-    model.fit(data, epochs=4, steps_per_epoch=1, verbose=1, )    
+    model.fit(data, epochs=15, steps_per_epoch=1, verbose=1, )    
    
