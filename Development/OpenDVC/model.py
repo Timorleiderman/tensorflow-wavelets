@@ -255,20 +255,21 @@ class OpenDVC(tf.keras.Model):
         with tf.GradientTape() as tape:
             train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
+        print("after tape")
         variables = self.trainable_variables
 
         gradients = tape.gradient(train_loss_total, variables)
-        print(gradients)
+        print("tape.gradient")
         self.train_MV_opt.apply_gradients(zip(gradients, variables))
-
-        # self.train_loss_total.update_state(train_loss_total)
-        # self.train_loss_MV.update_state(train_loss_MV)
-        # self.train_loss_MC.update_state(train_loss_MC)
-        # self.psnr.update_state(psnr)
-        # self.total_mse.update_state(total_mse)
-        # self.warp_mse.update_state(warp_mse)
-        # self.MC_mse.update_state(MC_mse)
-
+        print("apply grads")
+        self.train_loss_total.update_state(train_loss_total)
+        self.train_loss_MV.update_state(train_loss_MV)
+        self.train_loss_MC.update_state(train_loss_MC)
+        self.psnr.update_state(psnr)
+        self.total_mse.update_state(total_mse)
+        self.warp_mse.update_state(warp_mse)
+        self.MC_mse.update_state(MC_mse)
+        print("update_state")
     
         return {m.name: m.result() for m in [self.train_loss_total, self.train_loss_MV, self.train_loss_MC, self.psnr, self.total_mse, self.warp_mse, self.MC_mse]}
 
@@ -313,24 +314,24 @@ class OpenDVC(tf.keras.Model):
         return retval
 
 if __name__ == "__main__":
-    print("gg")
-    model = OpenDVC()
-    model.summary()
-    model.compile()
 
     import load
 
     folder = ["/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass"]
 
     batch_size = 4
-    Height = 240
-    Width = 240
+    Height = 64
+    Width = 64
     Channel = 3
     lr_init = 1e-4
     frames=20
     I_QP=27
 
+    model = OpenDVC(width=Width, height=Height, batch_size=batch_size, num_filters=128)
+    model.summary()
+    model.compile()
+
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
-    model.fit(data, epochs=15, steps_per_epoch=1, verbose=1, )    
+    model.fit(data, epochs=15, verbose=4, )    
    
