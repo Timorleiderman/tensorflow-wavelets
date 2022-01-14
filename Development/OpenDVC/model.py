@@ -130,13 +130,10 @@ class OpticalFlowLoss(tf.keras.layers.Layer):
 class OpticalFlow(tf.keras.layers.Layer):
     """ 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, batch_size, **kwargs):
         super(OpticalFlow, self).__init__(**kwargs)
         self.optic_loss = OpticalFlowLoss()
-
-    def build(self, input_shape):
-        # create filter matrix
-        self.batch_size = 4
+        self.batch_size = batch_size
 
     def call(self, inputs, training=None, mask=None):
         
@@ -152,7 +149,7 @@ class OpticalFlow(tf.keras.layers.Layer):
         im2_1 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_2)
         im2_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_1)
         
-        flow_zero = tf.zeros((4, im1_0.shape[1], im1_0.shape[2], 2), dtype=tf.float32)
+        flow_zero = tf.zeros((self.batch_size, im1_0.shape[1], im1_0.shape[2], 2), dtype=tf.float32)
         
         loss_0, flow_0 = self.optic_loss([flow_zero, im1_0, im2_0])
         loss_1, flow_1 = self.optic_loss([flow_0, im1_1, im2_1])
@@ -194,7 +191,7 @@ class OpenDVC(tf.keras.Model):
         self.res_synthesis_transform = SynthesisTransform(num_filters, kernel_size=5, M=3)
         self.prior = tfc.NoisyDeepFactorized(batch_shape=(num_filters,))
         
-        self.optical_flow = OpticalFlow()
+        self.optical_flow = OpticalFlow(batch_size)
         self.motion_comensation = MotionCompensation()
         self.width = width
         self.height = height
@@ -319,19 +316,20 @@ if __name__ == "__main__":
 
     folder = ["/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass"]
 
-    batch_size = 4
+    batch_size = 1
     Height = 64
     Width = 64
     Channel = 3
     lr_init = 1e-4
     frames=20
     I_QP=27
-
+    epochs=5
+    
     model = OpenDVC(width=Width, height=Height, batch_size=batch_size, num_filters=128)
     model.summary()
     model.compile()
 
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
-    model.fit(data, epochs=15, verbose=1, )    
+    model.fit(data, epochs=epochs, verbose=1, )    
    
