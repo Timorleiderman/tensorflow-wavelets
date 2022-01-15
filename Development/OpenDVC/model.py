@@ -249,6 +249,7 @@ class OpenDVC(tf.keras.Model):
 
     def train_step(self, x):
         print("Train step")
+        print(x.shape)
         with tf.GradientTape() as tape:
             train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
@@ -331,5 +332,5 @@ if __name__ == "__main__":
 
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
-    model.fit(data, epochs=epochs, verbose=1, )    
+    model.fit([data], epochs=epochs, verbose=1, )    
    
