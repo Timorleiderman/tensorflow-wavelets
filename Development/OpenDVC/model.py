@@ -391,7 +391,7 @@ if __name__ == "__main__":
     epochs=1
     checkpoint_filepath = "checkpoint/"
     backup_restore = "backup/"
-    model_save = "model_save/"
+    model_save = "model_save/1/"
 
     model = OpenDVC(width=Width, height=Height, batch_size=batch_size, num_filters=128)
     # model.summary()
