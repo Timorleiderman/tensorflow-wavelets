@@ -249,7 +249,6 @@ class OpenDVC(tf.keras.Model):
 
     def train_step(self, x):
         print("Train step")
-        print(x.shape)
         with tf.GradientTape() as tape:
             train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
@@ -270,21 +269,55 @@ class OpenDVC(tf.keras.Model):
         print("update_state")
     
         return {m.name: m.result() for m in [self.train_loss_total, self.train_loss_MV, self.train_loss_MC, self.psnr, self.total_mse, self.warp_mse, self.MC_mse]}
-
+    def test_step(self, x):
+        train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=False)
+        self.train_loss_total.update_state(train_loss_total)
+        self.train_loss_MV.update_state(train_loss_MV)
+        self.train_loss_MC.update_state(train_loss_MC)
+        self.psnr.update_state(psnr)
+        self.total_mse.update_state(total_mse)
+        self.warp_mse.update_state(warp_mse)
+        self.MC_mse.update_state(MC_mse)
+        
+        return {m.name: m.result() for m in [self.loss, self.bpp, self.mse]}
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=(None, None, 3), dtype=tf.uint8),
+        tf.TensorSpec(shape=(64, 64, 3), dtype=tf.uint8),
+        tf.TensorSpec(shape=(64, 64, 3), dtype=tf.uint8),
     ])
-    def compress(self, flow_tensor):
+    def compress(self, Y0_com, Y1_raw):
         """Compresses an image."""
         # Add batch dimension and cast to float.
-        x = tf.expand_dims(flow_tensor, 0)
-        x = tf.cast(x, dtype=tf.float32)
-        flow_latent = self.mv_analysis_transform(x)
+        print("in the comprss")
+        Y0_com = tf.expand_dims(Y0_com, 0)
+        Y1_raw = tf.expand_dims(Y1_raw, 0)
+        Y0_com = tf.cast(Y0_com, dtype=tf.float32)
+        Y1_raw = tf.cast(Y1_raw, dtype=tf.float32)
+
+        print(Y0_com.shape)
+        print(Y1_raw.shape)
+        flow_tensor = self.optical_flow([Y0_com, Y1_raw])
+        flow_latent = self.mv_analysis_transform(flow_tensor)
+        print(flow_latent.shape)
+        
         # Preserve spatial shapes of both image and latents.
-        x_shape = tf.shape(x)[1:-1]
+        x_shape = tf.shape(Y0_com)[1:-1]
         y_shape = tf.shape(flow_latent)[1:-1]
-        return self.entropy_model.compress(flow_latent), x_shape, y_shape
+        return self.entropy_model_mv.compress(flow_latent), x_shape, y_shape
+
+    @tf.function(input_signature=[
+        tf.TensorSpec(shape=(1,), dtype=tf.string),
+        tf.TensorSpec(shape=(2,), dtype=tf.int32),
+        tf.TensorSpec(shape=(2,), dtype=tf.int32),
+    ])
+    def decompress(self, string, x_shape, y_shape):
+        """Decompresses an image."""
+        y_hat = self.entropy_model_mv.decompress(string, y_shape)
+        x_hat = self.mv_synthesis_transform(y_hat)
+        # Remove batch dimension, and crop away any extraneous padding.
+        x_hat = x_hat[0, :x_shape[0], :x_shape[1], :]
+        # Then cast back to 8-bit integer.
+        return tf.saturate_cast(tf.round(x_hat), tf.uint8)
 
     def compile(self, **kwargs):
         super().compile(loss=None, metrics=None, loss_weights=None, weighted_metrics=None, **kwargs,)
@@ -307,9 +340,40 @@ class OpenDVC(tf.keras.Model):
     def fit(self, *args, **kwargs):
         retval = super().fit(*args, **kwargs)
         # After training, fix range coding tables.
-        self.entropy_model = tfc.ContinuousBatchedEntropyModel(
+        self.entropy_model_mv = tfc.ContinuousBatchedEntropyModel(
             self.prior, coding_rank=3, compression=True)
+
+        self.entropy_model_res = tfc.ContinuousBatchedEntropyModel(
+            self.prior, coding_rank=3, compression=True)
+
         return retval
+
+
+def read_png(filename):
+    """Loads a PNG image file."""
+    string = tf.io.read_file(filename)
+    return tf.image.decode_image(string, channels=3)
+
+
+def compress(args):
+    model = tf.keras.models.load_model(args.model_path)
+    Y0_com = read_png(args.input_i)
+    Y1_raw = read_png(args.input_p)
+
+    tensors = model.compress(Y0_com, Y1_raw)
+
+    packed = tfc.PackedTensors()
+    packed.pack(tensors)
+    with open(args.output_file, "wb") as f:
+        f.write(packed.string)
+
+
+class Arguments(object):
+    def __init__(self) -> None:
+        super().__init__()
+        self.model_path = "checkpoint/"
+        self.input_i = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f001.png"
+        self.input_p = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f002.png"
 
 if __name__ == "__main__":
 
@@ -322,15 +386,31 @@ if __name__ == "__main__":
     Width = 64
     Channel = 3
     lr_init = 1e-4
-    frames=20
+    frames=10
     I_QP=27
-    epochs=5
-    
+    epochs=1
+    checkpoint_filepath = "checkpoint/"
+    backup_restore = "backup/"
+    model_save = "model_save/"
+
     model = OpenDVC(width=Width, height=Height, batch_size=batch_size, num_filters=128)
-    model.summary()
+    # model.summary()
     model.compile()
+
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint( filepath=checkpoint_filepath, save_weights_only=True, save_freq='epoch', monitor='train_loss_total', mode='max', save_best_only=True)
 
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
-    model.fit([data], epochs=epochs, verbose=1, )    
-   
+    model.fit(data,
+              epochs=epochs, 
+              verbose=1, 
+            #   callbacks=
+            #   [
+            #     # model_checkpoint_callback, 
+            #     tf.keras.callbacks.TerminateOnNaN(),
+            #     tf.keras.callbacks.TensorBoard(log_dir=backup_restore, histogram_freq=1, update_freq="epoch"),
+            #     tf.keras.callbacks.experimental.BackupAndRestore(backup_restore),
+            #     ],
+                )   
+    tf.saved_model.save(model, model_save)
+    # compress(Arguments())
