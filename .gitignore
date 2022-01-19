@@ -25,3 +25,9 @@ checkpoint
 please_save.somthing.data-00000-of-00001
 .DS_Store
 *ckpt.*
+*.pb
+*.index
+*.data-00000-of-00001
+*.gz
+*.v2
+*.profile-empty
