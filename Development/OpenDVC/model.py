@@ -220,13 +220,9 @@ class OpenDVC(tf.keras.Model):
         flow_hat = self.mv_synthesis_transform(flow_latent_hat)
 
         Y1_warp = tfa.image.dense_image_warp(Y0_com, flow_hat )
-
         MC_input = tf.concat([flow_hat, Y0_com, Y1_warp], axis=-1)
-
         Y1_MC = self.motion_comensation(MC_input)
-
         Res = Y1_raw - Y1_MC
-
         res_latent = self.res_analysis_transform(Res)
         res_latent_hat, Res_likelihoods_bits = entropy_model_res(res_latent, training=training)
         Res_hat = self.res_synthesis_transform(res_latent_hat)
@@ -294,26 +290,55 @@ class OpenDVC(tf.keras.Model):
         Y0_com = tf.cast(Y0_com, dtype=tf.float32)
         Y1_raw = tf.cast(Y1_raw, dtype=tf.float32)
 
-        print(Y0_com.shape)
-        print(Y1_raw.shape)
         flow_tensor = self.optical_flow([Y0_com, Y1_raw])
         flow_latent = self.mv_analysis_transform(flow_tensor)
-        print(flow_latent.shape)
+        flow_latent_hat, _ = self.entropy_model_mv(flow_latent, training=False)
+        flow_hat = self.mv_synthesis_transform(flow_latent_hat)
+
+        Y1_warp = tfa.image.dense_image_warp(Y0_com, flow_hat )
+        MC_input = tf.concat([flow_hat, Y0_com, Y1_warp], axis=-1)
+        Y1_MC = self.motion_comensation(MC_input)
+        Res = Y1_raw - Y1_MC
+        res_latent = self.res_analysis_transform(Res)
+        res_latent_hat, _ = self.entropy_model_res(res_latent, training=False)
         
+        # Res_hat = self.res_synthesis_transform(res_latent_hat)
+        # Y1_com = Res_hat + Y1_MC
+
         # Preserve spatial shapes of both image and latents.
         x_shape = tf.shape(Y0_com)[1:-1]
         y_shape = tf.shape(flow_latent)[1:-1]
-        return self.entropy_model_mv.compress(flow_latent), x_shape, y_shape
+        z_shape = tf.shape(res_latent)[1:-1]
+
+        mv_str_bits = self.entropy_model_mv.compress(flow_latent)
+        res_str_bits = self.entropy_model_res.compress(res_latent)
+        return mv_str_bits, res_str_bits, x_shape, y_shape, z_shape
 
     @tf.function(input_signature=[
+        tf.TensorSpec(shape=(64, 64, 3), dtype=tf.uint8),
+        tf.TensorSpec(shape=(1,), dtype=tf.string),
         tf.TensorSpec(shape=(1,), dtype=tf.string),
         tf.TensorSpec(shape=(2,), dtype=tf.int32),
         tf.TensorSpec(shape=(2,), dtype=tf.int32),
+        tf.TensorSpec(shape=(2,), dtype=tf.int32),
     ])
-    def decompress(self, string, x_shape, y_shape):
+    def decompress(self, i_frame, mv_str_bits, res_str_bits, x_shape, y_shape, z_shape):
         """Decompresses an image."""
-        y_hat = self.entropy_model_mv.decompress(string, y_shape)
-        x_hat = self.mv_synthesis_transform(y_hat)
+        i_frame = tf.expand_dims(i_frame, 0)
+        Y0_com = tf.cast(i_frame, dtype=tf.float32)
+
+        flow_latent_hat = self.entropy_model_mv.decompress(mv_str_bits, y_shape)
+        flow_hat = self.mv_synthesis_transform(flow_latent_hat)
+
+        Y1_warp = tfa.image.dense_image_warp(Y0_com, flow_hat )
+        MC_input = tf.concat([flow_hat, Y0_com, Y1_warp], axis=-1)
+        Y1_MC = self.motion_comensation(MC_input)
+
+        res_latent_hat, _ = self.entropy_model_res.decompress(res_str_bits, z_shape)
+        Res_hat = self.res_synthesis_transform(res_latent_hat)
+        Y1_dcom = Res_hat + Y1_MC
+
+        x_hat = self.mv_synthesis_transform(Y1_dcom)
         # Remove batch dimension, and crop away any extraneous padding.
         x_hat = x_hat[0, :x_shape[0], :x_shape[1], :]
         # Then cast back to 8-bit integer.
