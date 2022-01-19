@@ -18,11 +18,12 @@
 		"ms-python.python",
 		"donjayamanne.python-environment-manager",
 		"yzhang.markdown-all-in-one",
+		"ms-python.python",
 		"ms-toolsai.jupyter"
 		
 	],
 
 
-	"runArgs": ["--privileged=true", "-v", "/mnt/:/mnt/"]
+	"runArgs": ["--privileged=true", "-v", "/mnt/:/mnt/","--gpus", "all", "--user", "1000:1000"]
 
 }
