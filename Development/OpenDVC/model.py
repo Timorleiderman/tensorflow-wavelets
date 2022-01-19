@@ -388,7 +388,7 @@ if __name__ == "__main__":
     lr_init = 1e-4
     frames=10
     I_QP=27
-    epochs=1
+    epochs=3
     checkpoint_filepath = "checkpoint/"
     backup_restore = "backup/"
     model_save = "model_save/1/"
@@ -397,20 +397,23 @@ if __name__ == "__main__":
     # model.summary()
     model.compile()
 
-    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint( filepath=checkpoint_filepath, save_weights_only=True, save_freq='epoch', monitor='train_loss_total', mode='max', save_best_only=True)
 
     data = np.zeros([frames, batch_size, Height, Width, Channel])
     data - load.load_local_data(data, frames, batch_size, Height, Width, Channel, folder)
+    
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint( filepath=checkpoint_filepath, save_weights_only=True, save_freq='epoch', monitor='train_loss_total', mode='max', save_best_only=True)
     model.fit(data,
               epochs=epochs, 
               verbose=1, 
-            #   callbacks=
-            #   [
-            #     # model_checkpoint_callback, 
-            #     tf.keras.callbacks.TerminateOnNaN(),
-            #     tf.keras.callbacks.TensorBoard(log_dir=backup_restore, histogram_freq=1, update_freq="epoch"),
-            #     tf.keras.callbacks.experimental.BackupAndRestore(backup_restore),
-            #     ],
+              callbacks=
+              [
+                # model_checkpoint_callback, 
+                tf.keras.callbacks.TerminateOnNaN(),
+                tf.keras.callbacks.TensorBoard(log_dir=backup_restore, histogram_freq=1, update_freq="epoch"),
+                tf.keras.callbacks.experimental.BackupAndRestore(backup_restore),
+                ],
                 )   
+    print("Done Training ...")
     tf.saved_model.save(model, model_save)
+    print("saved", model_save)
     # compress(Arguments())
