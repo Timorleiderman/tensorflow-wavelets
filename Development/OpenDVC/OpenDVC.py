@@ -325,28 +325,16 @@ class OpenDVC(tf.keras.Model):
         Y0_com = tf.cast(ref_frame, dtype=tf.float32)
 
         flow_latent_hat = self.entropy_model_mv.decompress(mv_str_bits, y_shape)
-        
-        print("flow_latent_hat ",flow_latent_hat.shape)
         flow_hat = self.mv_synthesis_transform(flow_latent_hat)
-
         Y1_warp = tfa.image.dense_image_warp(Y0_com, flow_hat )
         MC_input = tf.concat([flow_hat, Y0_com, Y1_warp], axis=-1)
         Y1_MC = self.motion_comensation(MC_input)
-
-        print("Y1_MC:",Y1_MC.shape)
-        print(res_str_bits.shape)
-        print(z_shape.shape)
-
         res_latent_hat = self.entropy_model_res.decompress(res_str_bits, z_shape)
-        print("res_latent_hat ",flow_latent_hat.shape)
         Res_hat = self.res_synthesis_transform(res_latent_hat)
         Y1_dcom = Res_hat + Y1_MC
 
-        print(Y1_dcom.shape)
         # Remove batch dimension, and crop away any extraneous padding.
         x_hat = Y1_dcom[0, :x_shape[0], :x_shape[1], :]
-        print(x_hat.shape)
-        print("cast back")
         # Then cast back to 8-bit integer.
         return tf.saturate_cast(tf.round(x_hat), tf.uint8)
 
@@ -395,13 +383,14 @@ def write_png(filename, image):
     tf.io.write_file(filename, string)
 
 
-def compress(args):
-    model = tf.keras.models.load_model(args.model_path)
+def compress(args, model):
+    # model = tf.keras.models.load_model(args.model_path)
+    print("compress")
     Y0_com = read_png(args.input_i)
     Y1_raw = read_png(args.input_p)
 
     tensors = model.compress(Y0_com, Y1_raw)
-
+    
     packed = tfc.PackedTensors()
     packed.pack(tensors)
     with open(args.output_file, "wb") as f:
@@ -421,7 +410,10 @@ def decompress(args, model):
     with open(args.input_file_decom, "rb") as f:
         packed = tfc.PackedTensors(f.read())
     tensors = packed.unpack(dtypes)
-    x_hat = model.decompress(Y1_Ref, *tensors)
+    print(len(tensors))
+    tensors.insert(0, Y1_Ref)
+    print(len(tensors))
+    x_hat = model.decompress(*tensors)
 
     # Write reconstructed image out as a PNG file.
     write_png(args.output_file_decom, x_hat)
@@ -429,7 +421,11 @@ def decompress(args, model):
 class Arguments(object):
     def __init__(self) -> None:
         super().__init__()
+
         self.model_path = "checkpoint/"
+        self.model_save = "model_save/1/"
+        self.backup_restore = "backup/"
+
         self.input_i = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f001.png"
         self.input_p = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f002.png"
         self.output_file = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Basketballpass_bin/test.bin"
