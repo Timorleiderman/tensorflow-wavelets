@@ -19,7 +19,8 @@
 		"donjayamanne.python-environment-manager",
 		"yzhang.markdown-all-in-one",
 		"ms-python.python",
-		"ms-toolsai.jupyter"
+		"ms-toolsai.jupyter",
+		"knisterpeter.vscode-github"
 		
 	],
 
