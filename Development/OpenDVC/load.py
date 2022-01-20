@@ -17,7 +17,7 @@ def load_data(data, frames, batch_size, Height, Width, Channel, folder, I_QP):
 
         path = folder[np.random.randint(len(folder))] + '/'
 
-        bb = np.random.randint(0, 447 - 256)
+        bb = np.random.randint(0, 447 - Width)
 
         for f in range(frames):
 
