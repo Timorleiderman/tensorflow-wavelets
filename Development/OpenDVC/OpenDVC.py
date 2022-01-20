@@ -401,7 +401,7 @@ def decompress(args, model):
     """Decompresses an image."""
     # Load the model and determine the dtypes of tensors required to decompress.
     # model = tf.keras.models.load_model(args.model_path)
-    dtypes = [t.dtype for t in model.decompress.input_signature]
+    dtypes = [t.dtype for t in model.decompress.input_signature[1:]]
 
     Y1_Ref = read_png(args.input_ref_decom)
 
@@ -410,9 +410,7 @@ def decompress(args, model):
     with open(args.input_file_decom, "rb") as f:
         packed = tfc.PackedTensors(f.read())
     tensors = packed.unpack(dtypes)
-    print(len(tensors))
     tensors.insert(0, Y1_Ref)
-    print(len(tensors))
     x_hat = model.decompress(*tensors)
 
     # Write reconstructed image out as a PNG file.
@@ -441,13 +439,13 @@ if __name__ == "__main__":
     folder = ["/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass"]
 
     batch_size = 1
-    Height = 64
-    Width = 64
+    Height = 240
+    Width = 240
     Channel = 3
     lr_init = 1e-4
-    frames=10
+    frames=100
     I_QP=27
-    epochs=1
+    epochs=20
     checkpoint_filepath = "checkpoint/"
     backup_restore = "backup/"
     model_save = "model_save/1/"
@@ -463,7 +461,7 @@ if __name__ == "__main__":
     # for elem in dataset:
     #     print(elem.shape)
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint( filepath=checkpoint_filepath, save_weights_only=True, save_freq='epoch', monitor='train_loss_total', mode='max', save_best_only=True)
-    model.fit(data,
+    model.fit(dataset,
               epochs=epochs, 
               verbose=1, 
               callbacks=
