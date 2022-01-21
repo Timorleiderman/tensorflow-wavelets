@@ -4,6 +4,7 @@ import tensorflow_compression as tfc
 import motion
 import numpy as np
 import load
+import resource
 
 from tensorflow.keras.layers import AveragePooling2D, Conv2D
 
@@ -383,54 +384,52 @@ def write_png(filename, image):
     tf.io.write_file(filename, string)
 
 
-def compress(args, model):
+def compress(model, input_i, input_p, output_bin):
     # model = tf.keras.models.load_model(args.model_path)
     print("compress")
-    Y0_com = read_png(args.input_i)
-    Y1_raw = read_png(args.input_p)
+    Y0_com = read_png(input_i)
+    Y1_raw = read_png(input_p)
 
     tensors = model.compress(Y0_com, Y1_raw)
     
     packed = tfc.PackedTensors()
     packed.pack(tensors)
-    with open(args.output_file, "wb") as f:
+    with open(output_bin, "wb") as f:
         f.write(packed.string)
 
 
-def decompress(args, model):
+def decompress(model, input_ref, input_bin, output_decom):
     """Decompresses an image."""
     # Load the model and determine the dtypes of tensors required to decompress.
     # model = tf.keras.models.load_model(args.model_path)
     dtypes = [t.dtype for t in model.decompress.input_signature[1:]]
 
-    Y1_Ref = read_png(args.input_ref_decom)
+    Y1_Ref = read_png(input_ref)
 
     # Read the shape information and compressed string from the binary file,
     # and decompress the image using the model.
-    with open(args.input_file_decom, "rb") as f:
+    with open(input_bin, "rb") as f:
         packed = tfc.PackedTensors(f.read())
     tensors = packed.unpack(dtypes)
     tensors.insert(0, Y1_Ref)
     x_hat = model.decompress(*tensors)
 
     # Write reconstructed image out as a PNG file.
-    write_png(args.output_file_decom, x_hat)
+    write_png(output_decom, x_hat)
 
 class Arguments(object):
     def __init__(self) -> None:
         super().__init__()
 
-        self.model_path = "checkpoint/"
+        self.model_checkpoints = "checkpoint/"
         self.model_save = "model_save/1/"
         self.backup_restore = "backup/"
 
-        self.input_i = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f001.png"
-        self.input_p = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f002.png"
-        self.output_file = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Basketballpass_bin/test.bin"
 
-        self.input_ref_decom = "/workspaces/tensorflow-wavelets/Development/OpenDVC/BasketballPass/f001.png"
-        self.input_file_decom = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Basketballpass_bin/test.bin"
-        self.output_file_decom = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Basketballpass_bin/test.png"
+class MemoryCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, log={}):
+        print("[MemoryCallback]: ", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+
 
 if __name__ == "__main__":
 
@@ -445,7 +444,7 @@ if __name__ == "__main__":
     lr_init = 1e-4
     frames=100
     I_QP=27
-    epochs=20
+    epochs=25
     checkpoint_filepath = "checkpoint/"
     backup_restore = "backup/"
     model_save = "model_save/1/"
@@ -460,15 +459,16 @@ if __name__ == "__main__":
     dataset = tf.data.Dataset.from_tensor_slices(data).batch(2)
     # for elem in dataset:
     #     print(elem.shape)
-    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint( filepath=checkpoint_filepath, save_weights_only=True, save_freq='epoch', monitor='train_loss_total', mode='max', save_best_only=True)
+    
     model.fit(dataset,
               epochs=epochs, 
               verbose=1, 
               callbacks=
               [
-                model_checkpoint_callback, 
+                MemoryCallback(),
+                tf.keras.callbacks.ModelCheckpoint( filepath=checkpoint_filepath, save_weights_only=True, save_freq='epoch', monitor='train_loss_total', mode='max', save_best_only=True), 
                 tf.keras.callbacks.TerminateOnNaN(),
-                tf.keras.callbacks.TensorBoard(log_dir=backup_restore, histogram_freq=1, update_freq="epoch"),
+                tf.keras.callbacks.TensorBoard(log_dir=backup_restore, histogram_freq=0, update_freq="epoch"),
                 tf.keras.callbacks.experimental.BackupAndRestore(backup_restore),
                 ],
                 )   
