@@ -31,6 +31,25 @@ def load_data(data, frames, batch_size, Height, Width, Channel, folder, I_QP):
     return data
 
 
+def load_data_7vimeo(data, samples, Height, Width, Channel, folder, I_QP):
+
+    for b in range(samples):
+
+        path = folder[np.random.randint(len(folder))] + '/'
+
+        bb = np.random.randint(0, 447 - Width)
+
+        for f in range(2):
+
+            if f == 0:
+                img = imageio.imread(path + 'im1_bpg444_QP' + str(I_QP) + '.png')
+                data[b, f, 0:Height, 0:Width, 0:Channel] = img[0:Height, bb: bb + Width, 0:Channel]
+            else:
+                img = imageio.imread(path + 'im' + str(f + 1) + '.png')
+                data[b, f, 0:Height, 0:Width, 0:Channel] = img[0:Height, bb: bb + Width, 0:Channel]
+
+    return data
+
 if __name__=="__main__":
     import numpy as np
 
