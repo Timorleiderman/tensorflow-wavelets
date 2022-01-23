@@ -6,7 +6,7 @@ import numpy as np
 import load
 import resource
 
-from tensorflow.keras.layers import AveragePooling2D, Conv2D
+from tensorflow.keras.layers import AveragePooling2D, Conv2D, Input
 
 tf.executing_eagerly()
 
@@ -117,7 +117,8 @@ class OpticalFlowLoss(tf.keras.layers.Layer):
         im1 = inputs[1]
         im2 = inputs[2]
 
-        flow = tf.image.resize(flow_course, [tf.shape(im1)[1], tf.shape(im2)[2]])
+        # print("in optical loss **** im1,2 ", im1.shape, im2.shape, flow_course.shape)
+        flow = tf.image.resize(flow_course, [tf.shape(im1)[1], tf.shape(im1)[2]])
         im1_warped = tf.keras.layers.Lambda(lambda a: tfa.image.dense_image_warp(a[0], a[1]))((im1, flow))
         convnet_input = tf.concat([im1_warped, im2, flow], axis=-1)
         res = self.convert(convnet_input)
@@ -140,6 +141,7 @@ class OpticalFlow(tf.keras.layers.Layer):
         
         im1_4 = inputs[0]
         im2_4 = inputs[1]
+        # print("im1/2_4 avarage pooling input ", im1_4.shape, im2_4.shape)
         im1_3 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_4)
         im1_2 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_3)
         im1_1 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_2)
@@ -151,7 +153,7 @@ class OpticalFlow(tf.keras.layers.Layer):
         im2_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_1)
         
         flow_zero = tf.zeros((self.batch_size, im1_0.shape[1], im1_0.shape[2], 2), dtype=tf.float32)
-        
+
         loss_0, flow_0 = self.optic_loss([flow_zero, im1_0, im2_0])
         loss_1, flow_1 = self.optic_loss([flow_0, im1_1, im2_1])
         loss_2, flow_2 = self.optic_loss([flow_1, im1_2, im2_2])
@@ -199,15 +201,16 @@ class OpenDVC(tf.keras.Model):
         self.batch_size = batch_size
 
         self.l = 256
-        self.build((2, batch_size, width, height, 3))
-
+        self.train_step_cnt = 0
+        self.build([(None, width, height, 3),(None, width, height, 3)])
 
     def call(self, x, training):
         """Computes rate and distortion losses."""
 
-        Y0_com = x[0]
-        Y1_raw = x[1]
-
+        Y0_com = tf.cast(x[0], dtype=tf.float32)
+        Y1_raw = tf.cast(x[1], dtype=tf.float32)
+        
+        # print("call OpenDVC with ", Y0_com.shape, Y1_raw.shape, training)
         entropy_model_mv = tfc.ContinuousBatchedEntropyModel(self.prior, coding_rank=3, compression=False)
         entropy_model_res = tfc.ContinuousBatchedEntropyModel(self.prior, coding_rank=3, compression=False)
 
@@ -241,17 +244,24 @@ class OpenDVC(tf.keras.Model):
         return  train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr
 
     def train_step(self, x):
-        print("Train step")
+        print("Train step", self.train_step_cnt)
+
         with tf.GradientTape() as tape:
             train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
-        print("after tape")
         variables = self.trainable_variables
+        if (self.train_step_cnt < 20000):
+            gradients = tape.gradient(train_loss_MV, variables)
+            self.train_MV_opt.apply_gradients(zip(gradients, variables))
+        elif (self.train_step_cnt < 40000):
+            gradients = tape.gradient(train_loss_MC, variables)
+            self.train_MC_op.apply_gradients(zip(gradients, variables))
+        else:
+            gradients = tape.gradient(train_loss_total, variables)
+            self.train_total_op.apply_gradients(zip(gradients, variables))
+            
+        self.train_step_cnt += 1
 
-        gradients = tape.gradient(train_loss_total, variables)
-        print("tape.gradient")
-        self.train_MV_opt.apply_gradients(zip(gradients, variables))
-        print("apply grads")
         self.train_loss_total.update_state(train_loss_total)
         self.train_loss_MV.update_state(train_loss_MV)
         self.train_loss_MC.update_state(train_loss_MC)
@@ -259,7 +269,7 @@ class OpenDVC(tf.keras.Model):
         self.total_mse.update_state(total_mse)
         self.warp_mse.update_state(warp_mse)
         self.MC_mse.update_state(MC_mse)
-        print("update_state")
+
     
         return {m.name: m.result() for m in [self.train_loss_total, self.train_loss_MV, self.train_loss_MC, self.psnr, self.total_mse, self.warp_mse, self.MC_mse]}
     def test_step(self, x):
@@ -275,8 +285,8 @@ class OpenDVC(tf.keras.Model):
         return {m.name: m.result() for m in [self.loss, self.bpp, self.mse]}
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=(64, 64, 3), dtype=tf.uint8),
-        tf.TensorSpec(shape=(64, 64, 3), dtype=tf.uint8),
+        tf.TensorSpec(shape=(240, 240, 3), dtype=tf.uint8),
+        tf.TensorSpec(shape=(240, 240, 3), dtype=tf.uint8),
     ])
     def compress(self, Y0_com, Y1_raw):
         """Compresses an image."""
@@ -288,6 +298,7 @@ class OpenDVC(tf.keras.Model):
         Y1_raw = tf.cast(Y1_raw, dtype=tf.float32)
 
         flow_tensor = self.optical_flow([Y0_com, Y1_raw])
+        # print("flow_tensor ", flow_tensor.shape)
         flow_latent = self.mv_analysis_transform(flow_tensor)
         flow_latent_hat, _ = self.entropy_model_mv(flow_latent, training=False)
         flow_hat = self.mv_synthesis_transform(flow_latent_hat)
@@ -312,7 +323,7 @@ class OpenDVC(tf.keras.Model):
         return mv_str_bits, res_str_bits, x_shape, y_shape, z_shape
 
     @tf.function(input_signature=[
-        tf.TensorSpec(shape=(64, 64, 3), dtype=tf.uint8),
+        tf.TensorSpec(shape=(240, 240, 3), dtype=tf.uint8),
         tf.TensorSpec(shape=(1,), dtype=tf.string),
         tf.TensorSpec(shape=(1,), dtype=tf.string),
         tf.TensorSpec(shape=(2,), dtype=tf.int32),
@@ -352,10 +363,9 @@ class OpenDVC(tf.keras.Model):
 
         learning_rate = 1e-4
         self.train_MV_opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        train_MC = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        train_total = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        aux_optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate*10.0)
-        aux_optimizer2 = tf.keras.optimizers.Adam(learning_rate=learning_rate*10.0)
+        self.train_MC_op = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        self.train_total_op = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        self.aux_optimizer_op = tf.keras.optimizers.Adam(learning_rate=learning_rate*10.0)
 
     def fit(self, *args, **kwargs):
         retval = super().fit(*args, **kwargs)
@@ -371,12 +381,19 @@ class OpenDVC(tf.keras.Model):
     def predict_step(self, x):
         raise NotImplementedError("Prediction API is not supported.")
 
-def read_png(filename):
+def read_png_resize(filename, width, height):
     """Loads a PNG image file."""
     string = tf.io.read_file(filename)
     image = tf.image.decode_image(string, channels=3)
-    img_res = tf.image.resize(image, [64,64])
+    img_res = tf.image.resize(image, [width,height])
     return tf.cast(img_res, dtype=tf.uint8)
+
+def read_png_crop(filename, width, height):
+    """Loads a PNG image file."""
+    string = tf.io.read_file(filename)
+    image = tf.image.decode_image(string, channels=3)
+    img_crop = tf.image.crop_to_bounding_box(image, 0, 0, width, height)
+    return tf.cast(img_crop, dtype=tf.uint8)
 
 def write_png(filename, image):
     """Saves an image to a PNG file."""
@@ -384,11 +401,11 @@ def write_png(filename, image):
     tf.io.write_file(filename, string)
 
 
-def compress(model, input_i, input_p, output_bin):
+def compress(model, input_i, input_p, output_bin, width=240, height=240):
     # model = tf.keras.models.load_model(args.model_path)
     print("compress")
-    Y0_com = read_png(input_i)
-    Y1_raw = read_png(input_p)
+    Y0_com = read_png_crop(input_i, width, height)
+    Y1_raw = read_png_crop(input_p, width, height)
 
     tensors = model.compress(Y0_com, Y1_raw)
     
@@ -398,13 +415,13 @@ def compress(model, input_i, input_p, output_bin):
         f.write(packed.string)
 
 
-def decompress(model, input_ref, input_bin, output_decom):
+def decompress(model, input_ref, input_bin, output_decom, width=240, height=240):
     """Decompresses an image."""
     # Load the model and determine the dtypes of tensors required to decompress.
     # model = tf.keras.models.load_model(args.model_path)
     dtypes = [t.dtype for t in model.decompress.input_signature[1:]]
 
-    Y1_Ref = read_png(input_ref)
+    Y1_Ref = read_png_crop(input_ref, width, height)
 
     # Read the shape information and compressed string from the binary file,
     # and decompress the image using the model.
@@ -463,6 +480,7 @@ if __name__ == "__main__":
     model.fit(dataset,
               epochs=epochs, 
               verbose=1, 
+              batch_size=2,
               callbacks=
               [
                 MemoryCallback(),
