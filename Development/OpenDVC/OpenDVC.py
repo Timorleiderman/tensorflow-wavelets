@@ -6,7 +6,7 @@ import numpy as np
 import load
 import resource
 
-from tensorflow.keras.layers import AveragePooling2D, Conv2D, Input
+from tensorflow.keras.layers import AveragePooling2D, Conv2D
 
 tf.executing_eagerly()
 
@@ -201,7 +201,7 @@ class OpenDVC(tf.keras.Model):
         self.batch_size = batch_size
 
         self.l = 256
-        self.train_step_cnt = 0
+        # self.train_step_cnt = 0
         self.build([(None, width, height, 3),(None, width, height, 3)])
 
     def call(self, x, training):
@@ -244,23 +244,23 @@ class OpenDVC(tf.keras.Model):
         return  train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr
 
     def train_step(self, x):
-        print("Train step", self.train_step_cnt)
+        # print("Train step", self.train_step_cnt)
 
         with tf.GradientTape() as tape:
             train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
         variables = self.trainable_variables
-        if (self.train_step_cnt < 20000):
-            gradients = tape.gradient(train_loss_MV, variables)
-            self.train_MV_opt.apply_gradients(zip(gradients, variables))
-        elif (self.train_step_cnt < 40000):
-            gradients = tape.gradient(train_loss_MC, variables)
-            self.train_MC_op.apply_gradients(zip(gradients, variables))
-        else:
-            gradients = tape.gradient(train_loss_total, variables)
-            self.train_total_op.apply_gradients(zip(gradients, variables))
+        # if (self.train_step_cnt < 20000):
+        gradients = tape.gradient(train_loss_MV, variables)
+        self.train_MV_opt.apply_gradients(zip(gradients, variables))
+        # elif (self.train_step_cnt < 40000):
+        # gradients = tape.gradient(train_loss_MC, variables)
+        # self.train_MC_op.apply_gradients(zip(gradients, variables))
+        # else:
+        # gradients = tape.gradient(train_loss_total, variables)
+        # self.train_total_op.apply_gradients(zip(gradients, variables))
             
-        self.train_step_cnt += 1
+        # self.train_step_cnt += 1
 
         self.train_loss_total.update_state(train_loss_total)
         self.train_loss_MV.update_state(train_loss_MV)
