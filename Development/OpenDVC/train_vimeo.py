@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 tf.executing_eagerly()
 
 batch_size = 1
-EPOCHS = 50
+EPOCHS = 20
 Height = 240
 Width = 240
 Channel = 3
 lr_init = 1e-4
-samples=1000
+samples = 200
 I_QP=27
 
 model = OpenDVC.OpenDVC(width=Width, height=Height, batch_size=batch_size, num_filters=128)
@@ -28,6 +28,7 @@ data = load.load_data_vimeo90k("/mnt/WindowsDev/Developer/tensorflow-wavelets/fo
 
 dataset = tf.data.Dataset.from_tensor_slices(data)
 
+# model.load_weights(args.model_checkpoints)
 
 print("Going to fit")
 model.fit(
