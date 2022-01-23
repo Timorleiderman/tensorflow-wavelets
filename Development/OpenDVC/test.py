@@ -23,6 +23,7 @@ model = tf.saved_model.load(arg.model_save)
 
 i_frame = path + 'im1' + '.png'
 p_frame = path + 'im2' + '.png'
+print(i_frame)
 out_bin = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Test_com/test.bin"
 out_decom = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Test_com/testdcom.png"
 p_on_test = "/workspaces/tensorflow-wavelets/Development/OpenDVC/Test_com/test_p_frame.png"
