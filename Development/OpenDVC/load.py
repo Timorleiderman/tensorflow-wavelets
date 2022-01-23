@@ -6,14 +6,6 @@ import numpy as np
 import tensorflow as tf
 
 
-def load_local_data(data, frames, bach_size, height, width, channels, folder):
-    for bch in range(bach_size):
-        path = folder[np.random.randint(len(folder))] + '/'
-        bb = np.random.randint(0,  415-width)
-        for f in range(frames):
-            img = imageio.imread(path + 'f' + str(f + 1).zfill(3) + '.png')
-            data[f, bch, 0 : height, 0 : width, 0 : channels] = img[0 : height, bb : bb + width, 0 : channels]
-    return data
 
 
 def load_random_path(np_folder):
@@ -55,6 +47,17 @@ def read_png_crop(filename, width, height):
     img_crop = tf.image.crop_to_bounding_box(image, 0, 0, width, height)
     return tf.cast(img_crop, dtype=tf.uint8)
 
+def load_local_data(path, samples, height, width, channels):
+    
+    data = list()
+    for s in range(2,samples):
+
+        img_ref = read_png_crop(path + '/f' + str(1).zfill(3) + '.png', width, height)
+        img_cur = read_png_crop(path + '/f' + str(s).zfill(3) + '.png', width, height)
+    
+        data.append([tf.expand_dims(img_ref, 0), tf.expand_dims(img_cur, 0)])     
+    
+    return data
 
 def load_data_vimeo90k(np_folder, samples, Height, Width, Channel, I_QP):
 
