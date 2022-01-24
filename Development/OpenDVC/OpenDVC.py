@@ -207,9 +207,12 @@ class OpenDVC(tf.keras.Model):
     def call(self, x, training):
         """Computes rate and distortion losses."""
 
-        Y0_com = tf.cast(x[0], dtype=tf.float32)
-        Y1_raw = tf.cast(x[1], dtype=tf.float32)
         
+        # Reference frame frame
+        Y0_com = tf.cast(x[0], dtype=tf.float32)
+        # current frame
+        Y1_raw = tf.cast(x[1], dtype=tf.float32)
+
         # print("call OpenDVC with ", Y0_com.shape, Y1_raw.shape, training)
         entropy_model_mv = tfc.ContinuousBatchedEntropyModel(self.prior, coding_rank=3, compression=False)
         entropy_model_res = tfc.ContinuousBatchedEntropyModel(self.prior, coding_rank=3, compression=False)
@@ -228,61 +231,67 @@ class OpenDVC(tf.keras.Model):
         Res_hat = self.res_synthesis_transform(res_latent_hat)
         Y1_com = Res_hat + Y1_MC
 
+
+        # bpp
         train_bpp_MV = tf.reduce_sum(tf.math.log(MV_likelihoods_bits)) / (-np.log(2) * self.height * self.width * self.batch_size)
         train_bpp_Res = tf.reduce_sum(tf.math.log(Res_likelihoods_bits)) / (-np.log(2) * self.height * self.width * self.batch_size)
 
-        total_mse = tf.reduce_mean(tf.math.squared_difference(Y1_com, Y1_raw))
+        # mse
+        ME_mse = tf.reduce_mean(tf.math.squared_difference(Y1_com, Y1_raw))
         warp_mse = tf.reduce_mean(tf.math.squared_difference(Y1_warp, Y1_raw))
         MC_mse = tf.reduce_mean(tf.math.squared_difference(Y1_raw, Y1_MC))
 
-        psnr = 10.0*tf.math.log(1.0/total_mse)/tf.math.log(10.0)
+        psnr = 10.0*tf.math.log(1.0/ME_mse)/tf.math.log(10.0)
         
-        train_loss_total = self.l * total_mse + (train_bpp_MV + train_bpp_Res)
+        # loss
+        train_loss_ME = self.l * ME_mse + (train_bpp_MV + train_bpp_Res)
         train_loss_MV = self.l * warp_mse + train_bpp_MV
         train_loss_MC = self.l * MC_mse + train_bpp_MV
 
-        return  train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr
+        return  train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr
 
     def train_step(self, x):
         # print("Train step", self.train_step_cnt)
 
         with tf.GradientTape() as tape:
-            train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=True)
+            train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
         variables = self.trainable_variables
-        # if (self.train_step_cnt < 20000):
-        gradients = tape.gradient(train_loss_MV, variables)
-        self.train_MV_opt.apply_gradients(zip(gradients, variables))
-        # elif (self.train_step_cnt < 40000):
+
+        # gradients = tape.gradient(train_loss_MV, variables)
+        # self.train_MV_opt.apply_gradients(zip(gradients, variables))
+        # self.train_loss_MV.update_state(train_loss_MV)
+        # self.warp_mse.update_state(warp_mse)
+
         # gradients = tape.gradient(train_loss_MC, variables)
         # self.train_MC_op.apply_gradients(zip(gradients, variables))
-        # else:
-        # gradients = tape.gradient(train_loss_total, variables)
-        # self.train_total_op.apply_gradients(zip(gradients, variables))
-            
-        # self.train_step_cnt += 1
+        # self.train_loss_MC.update_state(train_loss_MC)
+        # self.MC_mse.update_state(MC_mse)
 
-        self.train_loss_total.update_state(train_loss_total)
-        self.train_loss_MV.update_state(train_loss_MV)
-        self.train_loss_MC.update_state(train_loss_MC)
+
+        gradients = tape.gradient(train_loss_ME, variables)
+        self.train_ME_op.apply_gradients(zip(gradients, variables))
+        self.train_loss_ME.update_state(train_loss_ME)
+        self.ME_mse.update_state(ME_mse)
+
+        
         self.psnr.update_state(psnr)
-        self.total_mse.update_state(total_mse)
-        self.warp_mse.update_state(warp_mse)
-        self.MC_mse.update_state(MC_mse)
-
+        
     
-        return {m.name: m.result() for m in [self.train_loss_total, self.train_loss_MV, self.train_loss_MC, self.psnr, self.total_mse, self.warp_mse, self.MC_mse]}
+        return {m.name: m.result() for m in [self.train_loss_ME, self.train_loss_MV, self.train_loss_MC, self.ME_mse, self.warp_mse, self.MC_mse, self.psnr]}
     def test_step(self, x):
-        train_loss_total, train_loss_MV, train_loss_MC, total_mse, warp_mse, MC_mse, psnr = self(x, training=False)
-        self.train_loss_total.update_state(train_loss_total)
+
+        train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=False)
+
+        self.train_loss_ME.update_state(train_loss_ME)
         self.train_loss_MV.update_state(train_loss_MV)
         self.train_loss_MC.update_state(train_loss_MC)
         self.psnr.update_state(psnr)
-        self.total_mse.update_state(total_mse)
+        self.ME_mse.update_state(ME_mse)
         self.warp_mse.update_state(warp_mse)
         self.MC_mse.update_state(MC_mse)
         
-        return {m.name: m.result() for m in [self.loss, self.bpp, self.mse]}
+        return {m.name: m.result() for m in  [self.train_loss_ME, self.train_loss_MV, self.train_loss_MC, self.ME_mse, self.warp_mse, self.MC_mse, self.psnr]}
 
     @tf.function(input_signature=[
         tf.TensorSpec(shape=(240, 240, 3), dtype=tf.uint8),
@@ -353,18 +362,18 @@ class OpenDVC(tf.keras.Model):
     def compile(self, **kwargs):
         super().compile(loss=None, metrics=None, loss_weights=None, weighted_metrics=None, **kwargs,)
         
-        self.train_loss_total = tf.keras.metrics.Mean(name="train_loss_total")
+        self.train_loss_ME = tf.keras.metrics.Mean(name="train_loss_ME")
         self.train_loss_MV = tf.keras.metrics.Mean(name="train_loss_MV")
         self.train_loss_MC = tf.keras.metrics.Mean(name="train_loss_MC")
         self.psnr = tf.keras.metrics.Mean(name="psnr")
-        self.total_mse = tf.keras.metrics.Mean(name="total_mse")
+        self.ME_mse = tf.keras.metrics.Mean(name="ME_mse")
         self.warp_mse = tf.keras.metrics.Mean(name="warp_mse")
         self.MC_mse = tf.keras.metrics.Mean(name="MC_mse")
 
         learning_rate = 1e-4
         self.train_MV_opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         self.train_MC_op = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        self.train_total_op = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        self.train_ME_op = tf.keras.optimizers.Adam(learning_rate=learning_rate)
         self.aux_optimizer_op = tf.keras.optimizers.Adam(learning_rate=learning_rate*10.0)
 
     def fit(self, *args, **kwargs):
@@ -439,6 +448,9 @@ class Arguments(object):
         super().__init__()
 
         self.model_checkpoints = "checkpoint/"
+        self.model_checkpoints_me = "checkpoint_me/"
+        self.model_checkpoints_mv = "checkpoint_mv/"
+        self.model_checkpoints_mc = "checkpoint_mc/"
         self.model_save = "model_save/1/"
         self.backup_restore = "backup/"
 
