@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 tf.executing_eagerly()
 
 batch_size = 1
-EPOCHS = 40
+EPOCHS = 10
 Height = 240
 Width = 240
 Channel = 3
@@ -41,13 +41,14 @@ hist = model.fit(
         callbacks=
             [
             OpenDVC.MemoryCallback(),
-            tf.keras.callbacks.ModelCheckpoint(filepath=args.model_checkpoints_me, save_weights_only=True, save_freq='epoch', monitor="train_loss_ME", mode='min',  save_best_only=True, verbose=2), 
+            tf.keras.callbacks.ModelCheckpoint(filepath=args.model_checkpoints, save_weights_only=True, save_freq='epoch',monitor="train_loss_MV",mode='min',  save_best_only=True, verbose=2), 
+            # tf.keras.callbacks.ModelCheckpoint(filepath=args.model_checkpoints_me, save_weights_only=True, save_freq='epoch', monitor="train_loss_ME", mode='min',  save_best_only=True, verbose=2), 
             # tf.keras.callbacks.ModelCheckpoint(filepath=args.model_checkpoints_mv, save_weights_only=True, save_freq='epoch',monitor="train_loss_MV",mode='min',  save_best_only=True, verbose=2), 
             # tf.keras.callbacks.ModelCheckpoint(filepath=args.model_checkpoints_mc, save_weights_only=True, save_freq='epoch',monitor="train_loss_MC",mode='min',  save_best_only=True, verbose=2), 
 
             tf.keras.callbacks.TerminateOnNaN(),
             tf.keras.callbacks.TensorBoard(log_dir=args.backup_restore, histogram_freq=0, update_freq="epoch"),
-            # tf.keras.callbacks.experimental.BackupAndRestore(args.backup_restore),
+            tf.keras.callbacks.experimental.BackupAndRestore(args.backup_restore),
             ],
 
         )  

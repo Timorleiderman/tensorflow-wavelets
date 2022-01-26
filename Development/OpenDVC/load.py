@@ -72,10 +72,10 @@ def load_data_vimeo90k(np_folder, samples, Height, Width, Channel, I_QP):
             img_ref = read_png_crop(path + 'im1_bpg444_QP' + str(I_QP) + '.png', Width, Height)
             img_cur = read_png_crop(path + 'im' + str(f + 1) + '.png', Width, Height)
         else:
-            img_ref = read_png_crop(path + 'im' + str(1) + '.png', Width, Height)
+            img_ref = read_png_crop(path + 'im' + str(1) + '.png', Width, Height) 
             img_cur = read_png_crop(path + 'im' + str(f + 1) + '.png', Width, Height)
         
-        data.append([tf.expand_dims(img_ref, 0), tf.expand_dims(img_cur, 0)])     
+        data.append([tf.expand_dims(img_ref/255, 0), tf.expand_dims(img_cur/255, 0)])     
         
     return data
 

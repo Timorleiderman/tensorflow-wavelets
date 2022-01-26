@@ -253,28 +253,36 @@ class OpenDVC(tf.keras.Model):
     def train_step(self, x):
         # print("Train step", self.train_step_cnt)
 
-        with tf.GradientTape() as tape:
+        with tf.GradientTape() as tape_me:
             train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=True)
-        
+            
         variables = self.trainable_variables
-
-        # gradients = tape.gradient(train_loss_MV, variables)
-        # self.train_MV_opt.apply_gradients(zip(gradients, variables))
-        # self.train_loss_MV.update_state(train_loss_MV)
-        # self.warp_mse.update_state(warp_mse)
-
-        # gradients = tape.gradient(train_loss_MC, variables)
-        # self.train_MC_op.apply_gradients(zip(gradients, variables))
-        # self.train_loss_MC.update_state(train_loss_MC)
-        # self.MC_mse.update_state(MC_mse)
-
-
-        gradients = tape.gradient(train_loss_ME, variables)
+        gradients = tape_me.gradient(train_loss_ME, variables)
         self.train_ME_op.apply_gradients(zip(gradients, variables))
         self.train_loss_ME.update_state(train_loss_ME)
         self.ME_mse.update_state(ME_mse)
 
+
+        with tf.GradientTape() as tape_mv:
+            train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=True)
         
+        variables = self.trainable_variables
+        gradients = tape_mv.gradient(train_loss_MV, variables)
+        self.train_MV_opt.apply_gradients(zip(gradients, variables))
+        self.train_loss_MV.update_state(train_loss_MV)
+        self.warp_mse.update_state(warp_mse)
+
+
+        with tf.GradientTape() as tape_mc:
+            train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=True)
+
+        variables = self.trainable_variables
+        gradients = tape_mc.gradient(train_loss_MC, variables)
+        self.train_MC_op.apply_gradients(zip(gradients, variables))
+        self.train_loss_MC.update_state(train_loss_MC)
+        self.MC_mse.update_state(MC_mse)
+
+
         self.psnr.update_state(psnr)
         
     
@@ -303,8 +311,8 @@ class OpenDVC(tf.keras.Model):
         print("in the compress")
         Y0_com = tf.expand_dims(Y0_com, 0)
         Y1_raw = tf.expand_dims(Y1_raw, 0)
-        Y0_com = tf.cast(Y0_com, dtype=tf.float32)
-        Y1_raw = tf.cast(Y1_raw, dtype=tf.float32)
+        Y0_com = tf.cast(Y0_com / 255, dtype=tf.float32)
+        Y1_raw = tf.cast(Y1_raw / 255, dtype=tf.float32)
 
         flow_tensor = self.optical_flow([Y0_com, Y1_raw])
         # print("flow_tensor ", flow_tensor.shape)
@@ -343,7 +351,7 @@ class OpenDVC(tf.keras.Model):
         """Decompresses an image."""
         print("in decompress")
         ref_frame = tf.expand_dims(ref_frame, 0)
-        Y0_com = tf.cast(ref_frame, dtype=tf.float32)
+        Y0_com = tf.cast(ref_frame / 255, dtype=tf.float32)
 
         flow_latent_hat = self.entropy_model_mv.decompress(mv_str_bits, y_shape)
         flow_hat = self.mv_synthesis_transform(flow_latent_hat)
@@ -365,6 +373,7 @@ class OpenDVC(tf.keras.Model):
         self.train_loss_ME = tf.keras.metrics.Mean(name="train_loss_ME")
         self.train_loss_MV = tf.keras.metrics.Mean(name="train_loss_MV")
         self.train_loss_MC = tf.keras.metrics.Mean(name="train_loss_MC")
+
         self.psnr = tf.keras.metrics.Mean(name="psnr")
         self.ME_mse = tf.keras.metrics.Mean(name="ME_mse")
         self.warp_mse = tf.keras.metrics.Mean(name="warp_mse")
