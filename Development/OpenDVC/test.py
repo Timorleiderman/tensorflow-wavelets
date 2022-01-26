@@ -19,6 +19,7 @@ path = load.load_random_path("/mnt/WindowsDev/Developer/tensorflow-wavelets/fold
 
 arg = OpenDVC.Arguments()
 
+print("loading model from ", arg.model_save)
 model = tf.saved_model.load(arg.model_save)
 
 i_frame = path + 'im1' + '.png'
