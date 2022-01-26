@@ -363,7 +363,7 @@ class OpenDVC(tf.keras.Model):
         Y1_dcom = Res_hat + Y1_MC
 
         # Remove batch dimension, and crop away any extraneous padding.
-        x_hat = Y1_dcom[0, :x_shape[0], :x_shape[1], :]
+        x_hat = Y1_dcom[0, :x_shape[0], :x_shape[1], :] * 255
         # Then cast back to 8-bit integer.
         return tf.saturate_cast(tf.round(x_hat), tf.uint8)
 
