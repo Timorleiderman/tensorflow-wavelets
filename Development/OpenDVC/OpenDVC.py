@@ -167,7 +167,7 @@ class AnalysisTransform(tf.keras.Sequential):
   """The analysis transform."""
 
   def __init__(self, num_filters=128, kernel_size=3, M=2):
-    super().__init__(name="analysis")
+    super(AnalysisTransform, self).__init__(name="analysis")
     self.add(tfc.SignalConv2D(num_filters, (kernel_size, kernel_size), corr=True, strides_down=2, padding="same_zeros", use_bias=True, name="layer_0",  activation=tfc.GDN(name="gdn_0")))
     self.add(tfc.SignalConv2D(num_filters, (kernel_size, kernel_size), corr=True, strides_down=2, padding="same_zeros", use_bias=True, name="layer_1", activation=tfc.GDN(name="gdn_1")))
     self.add(tfc.SignalConv2D(num_filters, (kernel_size, kernel_size), corr=True, strides_down=2, padding="same_zeros", use_bias=True, name="layer_2", activation=tfc.GDN(name="gdn_2")))
@@ -177,7 +177,7 @@ class AnalysisTransform(tf.keras.Sequential):
 class SynthesisTransform(tf.keras.Sequential):
     """The synthesis transform."""
     def __init__(self, num_filters=128, kernel_size=3, M=2):
-        super().__init__(name="synthesis")
+        super(SynthesisTransform, self).__init__(name="synthesis")
         self.add(tfc.SignalConv2D(num_filters, (kernel_size, kernel_size), corr=False, strides_up=2, padding="same_zeros", name="layer_0", use_bias=True, activation=tfc.GDN(name="igdn_0", inverse=True)))
         self.add(tfc.SignalConv2D(num_filters, (kernel_size, kernel_size), corr=False, strides_up=2, padding="same_zeros", name="layer_1", use_bias=True, activation=tfc.GDN(name="igdn_1", inverse=True)))
         self.add(tfc.SignalConv2D(num_filters, (kernel_size, kernel_size), corr=False, strides_up=2, padding="same_zeros", name="layer_2", use_bias=True, activation=tfc.GDN(name="igdn_2", inverse=True)))
@@ -187,7 +187,7 @@ class OpenDVC(tf.keras.Model):
     """Main model class."""
 
     def __init__(self, width=240, height=240, batch_size=4, num_filters=128):
-        super().__init__()
+        super(OpenDVC, self).__init__()
         self.mv_analysis_transform = AnalysisTransform(num_filters, kernel_size=3, M=128)
         self.mv_synthesis_transform = SynthesisTransform(num_filters, kernel_size=3)
         self.res_analysis_transform = AnalysisTransform(num_filters, kernel_size=5, M=128)
@@ -258,7 +258,7 @@ class OpenDVC(tf.keras.Model):
             
         variables = self.trainable_variables
         gradients = tape_me.gradient(train_loss_ME, variables)
-        self.train_ME_op.apply_gradients(zip(gradients, variables))
+        self.train_ME_op.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
         self.train_loss_ME.update_state(train_loss_ME)
         self.ME_mse.update_state(ME_mse)
 
@@ -268,7 +268,8 @@ class OpenDVC(tf.keras.Model):
         
         variables = self.trainable_variables
         gradients = tape_mv.gradient(train_loss_MV, variables)
-        self.train_MV_opt.apply_gradients(zip(gradients, variables))
+        self.train_MV_opt.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
+
         self.train_loss_MV.update_state(train_loss_MV)
         self.warp_mse.update_state(warp_mse)
 
@@ -278,7 +279,7 @@ class OpenDVC(tf.keras.Model):
 
         variables = self.trainable_variables
         gradients = tape_mc.gradient(train_loss_MC, variables)
-        self.train_MC_op.apply_gradients(zip(gradients, variables))
+        self.train_MC_op.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
         self.train_loss_MC.update_state(train_loss_MC)
         self.MC_mse.update_state(MC_mse)
 
