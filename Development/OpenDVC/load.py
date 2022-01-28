@@ -65,6 +65,7 @@ def load_data_vimeo90k(np_folder, samples, Height, Width, Channel, I_QP):
     path = paths[np.random.randint(len(paths))] + '/'
 
     data = list()
+    # data_out = list()
     bb = np.random.randint(0, 447 - Width)
     for s in range(samples):
         f = np.random.randint(7)
@@ -75,8 +76,8 @@ def load_data_vimeo90k(np_folder, samples, Height, Width, Channel, I_QP):
             img_ref = read_png_crop(path + 'im' + str(1) + '.png', Width, Height) 
             img_cur = read_png_crop(path + 'im' + str(f + 1) + '.png', Width, Height)
         
-        data.append([tf.expand_dims(img_ref/255, 0), tf.expand_dims(img_cur/255, 0)])     
-        
+        data.append([tf.expand_dims(img_ref, 0), tf.expand_dims(img_cur, 0)])     
+        # data_out.append(tf.expand_dims(img_cur/255, 0))
     return data
 
 
