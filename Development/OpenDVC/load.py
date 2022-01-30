@@ -81,41 +81,6 @@ def load_data_vimeo90k(np_folder, samples, Height, Width, Channel, I_QP):
     return data
 
 
-class DataGenerator(tf.keras.utils.Sequence):
-  def __init__(self, np_folder, batch_size=4, width=240, height=240, channels=3, I_QP=27):
-    super().__init__()
-    self.dir_paths = np.load(np_folder)
-    self.batch_size = batch_size
-    self.width = width
-    self.height= height
-    self.channels = channels
-    self.on_epoch_end()
-    self.i_qp = I_QP
-  def __len__(self):
-    return len(self.dir_paths)*7//self.batch_size
-
-  def __getitem__(self, index):
-    img_path = self.dir_paths[index] + "/"
-
-    frame = np.random.randint(7)
-    bb = np.random.randint(0, 447 - self.width)
-
-    img_ref = imageio.imread(img_path + 'im1_bpg444_QP' + str(self.i_qp) + '.png')
-    img_cur = imageio.imread(img_path + 'im' + str(frame + 1) + '.png')
-    
-    
-    img_ref= img_ref[0:self.height, bb: bb + self.width, 0:self.channels]
-    img_cur = img_cur[0:self.height, bb: bb + self.width, 0:self.channels]
-
-    x = [img_ref, img_cur]
-    y = img_cur
-    return x, y
-
-      
-
-
-
-
 if __name__=="__main__":
     import numpy as np
 
