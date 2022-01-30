@@ -1,59 +1,67 @@
 import numpy as np
-import tf.keras
+import tensorflow as tf
+import tensorflow.keras
+import load
+import os
+import sys
+import fnmatch
 
 
-class DataGenerator(tf.keras.utils.Sequence):
+class DataVimeo90kGenerator(tf.keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels, batch_size=32, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True):
+    def __init__(self, np_folder, batch_size=32, dim=(240,240,32), n_channels=3, shuffle=True, I_QP=27): 
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
-        self.labels = labels
-        self.list_IDs = list_IDs
+        self.np_folder = np_folder
         self.n_channels = n_channels
-        self.n_classes = n_classes
         self.shuffle = shuffle
+        self.i_qp = I_QP
         self.on_epoch_end()
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        return int(len(np.load(self.np_folder))/self.batch_size)
 
     def __getitem__(self, index):
         'Generate one batch of data'
         # Generate indexes of the batch
-        indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
-
-        # Find list of IDs
-        list_IDs_temp = [self.list_IDs[k] for k in indexes]
+        print("get item:", index)
 
         # Generate data
-        X, y = self.__data_generation(list_IDs_temp)
-
-        return X, y
+        return self.__data_generation()
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(len(self.list_IDs))
-        if self.shuffle == True:
-            np.random.shuffle(self.indexes)
+           
+        # path = self.paths[np.random.randint(len(self.paths))] + '/'
+        pass
 
-    def __data_generation(self, list_IDs_temp):
+    def __data_generation(self):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
-        X = np.empty((self.batch_size, *self.dim, self.n_channels))
-        y = np.empty((self.batch_size), dtype=int)
+        X = load.load_data_vimeo90k(self.np_folder, self.batch_size, self.dim[0], self.dim[1], self.dim[2], self.i_qp)
 
-        # Generate data
-        for i, ID in enumerate(list_IDs_temp):
-            # Store sample
-            X[i,] = np.load('data/' + ID + '.npy')
+        return X
 
-            # Store class
-            y[i] = self.labels[ID]
+def generate_local_npy(pattern, path):
+    result = list()
+    print("")
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                result.append(root)
+                sys.stdout.write('\r'+root + " ...")
+    print("")
+    return result
 
-        return X, tf.keras.utils.to_categorical(y, num_classes=self.n_classes)
-
+    return result
 if __name__ == "__main__":
     print("hey")
+    # a = generate_local_npy("f001.png", "/workspaces/tensorflow-wavelets/Development/OpenDVC")
+    # np.save('local_basketball_cpy.npy', a)
+
+    a = DataVimeo90kGenerator("local_basketball_cpy.npy")
+
+    for data in a:
+        print(data)
