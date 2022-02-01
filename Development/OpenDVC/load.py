@@ -47,6 +47,11 @@ def read_png_crop(filename, width, height):
     img_crop = tf.image.crop_to_bounding_box(image, 0, 0, width, height)
     return tf.cast(img_crop, dtype=tf.uint8)
 
+def read_png_crop_np(filename, width, height):
+    """Loads a png file"""
+    img = imageio.imread(filename)
+    return img[0:height, 0: width, :]
+
 def load_local_data(path, samples, height, width, channels):
     
     data = list()
