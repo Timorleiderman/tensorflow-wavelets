@@ -132,10 +132,12 @@ class OpticalFlowLoss(tf.keras.layers.Layer):
 class OpticalFlow(tf.keras.layers.Layer):
     """ 
     """
-    def __init__(self, batch_size, **kwargs):
+    def __init__(self, batch_size, width, height,  **kwargs):
         super(OpticalFlow, self).__init__(**kwargs)
         self.optic_loss = OpticalFlowLoss()
         self.batch_size = batch_size
+        self.width = width
+        self.height = height
 
     def call(self, inputs, training=None, mask=None):
         
@@ -152,7 +154,7 @@ class OpticalFlow(tf.keras.layers.Layer):
         im2_1 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_2)
         im2_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im2_1)
         
-        flow_zero = tf.zeros((self.batch_size, im1_0.shape[1], im1_0.shape[2], 2), dtype=tf.float32)
+        flow_zero = tf.zeros((self.batch_size, self.width, self.height, 2), dtype=tf.float32)
 
         loss_0, flow_0 = self.optic_loss([flow_zero, im1_0, im2_0])
         loss_1, flow_1 = self.optic_loss([flow_0, im1_1, im2_1])
@@ -196,7 +198,7 @@ class OpenDVC(tf.keras.Model):
         self.prior_mv = tfc.NoisyDeepFactorized(batch_shape=(num_filters,))
         self.prior_res = tfc.NoisyDeepFactorized(batch_shape=(num_filters,))
 
-        self.optical_flow = OpticalFlow(batch_size)
+        self.optical_flow = OpticalFlow(batch_size, width, height)
         self.motion_comensation = MotionCompensation()
         self.width = width
         self.height = height
@@ -208,13 +210,12 @@ class OpenDVC(tf.keras.Model):
 
     def call(self, x, training):
         """Computes rate and distortion losses."""
-
         
         # Reference frame frame
         Y0_com = tf.cast(x[0], dtype=tf.float32)
         # current frame
         Y1_raw = tf.cast(x[1], dtype=tf.float32)
-
+        # print(Y1_raw.shape)
         # print("call OpenDVC with ", Y0_com.shape, Y1_raw.shape, training)
         entropy_model_mv = tfc.ContinuousBatchedEntropyModel(self.prior_mv, coding_rank=3, compression=False)
         entropy_model_res = tfc.ContinuousBatchedEntropyModel(self.prior_res, coding_rank=3, compression=False)
