@@ -46,18 +46,24 @@ class DataVimeo90kGenerator(tf.keras.utils.Sequence):
         I_QP = self.i_qp
         Width = self.dim[0]
         Height = self.dim[1]
-        f = np.random.randint(7)
-        if f == 0:
-            img_ref = load.read_png_crop_np(path + 'im1_bpg444_QP' + str(I_QP) + '.png', Width, Height)
-            img_cur = load.read_png_crop_np(path + 'im' + str(f + 1) + '.png', Width, Height)
-        else:
-            img_ref = load.read_png_crop_np(path + 'im' + str(1) + '.png', Width, Height) 
-            img_cur = load.read_png_crop_np(path + 'im' + str(f + 1) + '.png', Width, Height)
-        
+        X0 = np.empty((self.samples, *self.dim))
+        X1 = np.empty((self.samples, *self.dim))
+        for sample in range(self.samples):
+            f = np.random.randint(7)
+            if f == 0:
+                img_ref = load.read_png_crop_np(path + 'im1_bpg444_QP' + str(I_QP) + '.png', Width, Height)
+                img_cur = load.read_png_crop_np(path + 'im' + str(f + 1) + '.png', Width, Height)
+            else:
+                img_ref = load.read_png_crop_np(path + 'im' + str(1) + '.png', Width, Height) 
+                img_cur = load.read_png_crop_np(path + 'im' + str(f + 1) + '.png', Width, Height)
+            X0[sample,] = img_ref / 255
+            X1[sample,] = img_cur / 255
+
         # data.append()     
             # data_out.append(tf.expand_dims(img_cur/255, 0))
         # X = [tf.expand_dims(img_ref, 0), tf.expand_dims(img_cur, 0)]
-        return np.expand_dims(img_ref, 0), np.expand_dims(img_cur, 0), None
+        # return np.expand_dims(img_ref, 0), np.expand_dims(img_cur, 0), None
+        return X0, X1, None
         # X = load.load_data_vimeo90k(self.np_folder, 1, self.dim[0], self.dim[1], self.dim[2], self.i_qp)
         
         # return X
@@ -79,7 +85,7 @@ if __name__ == "__main__":
     # a = generate_local_npy("f001.png", "/workspaces/tensorflow-wavelets/Development/OpenDVC")
     # np.save('local_basketball_cpy.npy', a)
 
-    a = DataVimeo90kGenerator("/mnt/WindowsDev/Developer/tensorflow-wavelets/folder_cloud.npy", 1000, (240,240,3), 3, True, 27)
+    a = DataVimeo90kGenerator("/mnt/WindowsDev/Developer/tensorflow-wavelets/folder_cloud.npy", 4, (240,240,3), 3, True, 27)
 
     for data in a:
-        print(len(data))
+        print(data[0].shape)
