@@ -25,6 +25,6 @@
 	],
 
 
-	"runArgs": ["--privileged=true", "-v", "/mnt/:/mnt/","--gpus", "all", "--user", "1000:1000"]
+	"runArgs": ["--privileged=true", "-v", "/mnt/:/mnt/","--gpus", "all", "--user", "1000:1000", "-p", "6006:6006"]
 
 }
