@@ -4,11 +4,9 @@ import tensorflow_compression as tfc
 import motion
 import numpy as np
 import load
-import resource
+
 
 from tensorflow.keras.layers import AveragePooling2D, Conv2D
-
-
 
 
 
@@ -119,6 +117,7 @@ class OpticalFlowLoss(tf.keras.layers.Layer):
 
         # print("in optical loss **** im1,2 ", im1.shape, im2.shape, flow_course.shape)
         flow = tf.image.resize(flow_course, [tf.shape(im1)[1], tf.shape(im1)[2]])
+        # flow = tf.keras.layers.Resizing(tf.shape(im1)[1], tf.shape(im1)[2])(flow_course)
         im1_warped = tf.keras.layers.Lambda(lambda a: tfa.image.dense_image_warp(a[0], a[1]))((im1, flow))
         convnet_input = tf.concat([im1_warped, im2, flow], axis=-1)
         res = self.convert(convnet_input)
@@ -234,32 +233,10 @@ class OpenDVC(tf.keras.Model):
         Res_hat = self.res_synthesis_transform(res_latent_hat)
         Y1_com = Res_hat + Y1_MC
 
-
-        # bpp
-        # train_bpp_MV = tf.reduce_sum(tf.math.log(MV_likelihoods_bits)) / (-np.log(2) * self.height * self.width * self.batch_size)
-        # train_bpp_Res = tf.reduce_sum(tf.math.log(Res_likelihoods_bits)) / (-np.log(2) * self.height * self.width * self.batch_size)
-
         num_pixels = tf.cast(tf.reduce_prod(tf.shape(Y0_com)[:-1]), MV_likelihoods_bits.dtype)
         bpp = ( tf.reduce_sum(MV_likelihoods_bits) + tf.reduce_sum(Res_likelihoods_bits) ) /  num_pixels
-
-        # bpp = ( tf.reduce_sum(MV_likelihoods_bits) ) /  num_pixels
-        # mse
         mse = tf.reduce_mean(tf.math.squared_difference(Y1_com, Y1_raw))
-        # mse = tf.reduce_mean(tf.math.squared_difference(Y1_warp, Y1_raw))
-        # mse = tf.reduce_mean(tf.math.squared_difference(Y1_raw, Y1_MC))
-        # ME_mse = tf.reduce_mean(tf.math.squared_difference(Y1_com, Y1_raw))
-        # warp_mse = tf.reduce_mean(tf.math.squared_difference(Y1_warp, Y1_raw))
-        # MC_mse = tf.reduce_mean(tf.math.squared_difference(Y1_raw, Y1_MC))
-
-        # psnr = 10.0*tf.math.log(1.0/ME_mse)/tf.math.log(10.0)
-        
-        # loss
-        # train_loss_ME = self.l * ME_mse + (train_bpp_MV + train_bpp_Res)
-        # train_loss_MV = self.l * warp_mse + train_bpp_MV
-        # train_loss_MC = self.l * MC_mse + train_bpp_MV
-
         loss =  bpp + self.lmbda * mse
-        # return  train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, train_bpp_MV, train_bpp_Res, psnr
         return  loss, bpp, mse
 
     def train_step(self, x):
@@ -280,79 +257,6 @@ class OpenDVC(tf.keras.Model):
         self.mse.update_state(mse)
         return {m.name: m.result() for m in [self.loss, self.bpp, self.mse]}
 
-    # def train_step(self, x):
-    #     # print("Train iter", self.iter)
-        
-    #     with tf.GradientTape() as tape:
-    #         train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, train_bpp_MV, train_bpp_Res, psnr = self(x, training=True)
-            
-    #     variables = self.trainable_variables
-        
-    #     if self.iter < 1000:
-    #         loss = train_loss_MV
-    #         print("MV loss")
-    #     elif self.iter < 2000:
-    #         loss = train_loss_MC
-    #         print("MC loss")
-    #     else:
-    #         loss = train_loss_ME
-    #         print("total loss")
-
-    #     gradients = tape.gradient(loss, variables)
-    #     self.optimizer.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
-
-    #     self.train_loss_ME.update_state(train_loss_ME)
-    #     self.ME_mse.update_state(ME_mse)
-
-    #     self.train_loss_MV.update_state(train_loss_MV)
-    #     self.warp_mse.update_state(warp_mse)
-
-    #     self.train_loss_MC.update_state(train_loss_MC)
-    #     self.MC_mse.update_state(MC_mse)
-
-    #     self.train_bpp_MV.update_state(train_bpp_MV)
-    #     self.train_bpp_Res.update_state(train_bpp_Res)
-
-    #     self.psnr.update_state(psnr)
-
-    #     self.iter += 1
-    #     # self.optimizer.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
-    #     # with tf.GradientTape() as tape_mv:
-    #     #     train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=True)
-        
-    #     # variables = self.trainable_variables
-    #     # gradients = tape_mv.gradient(train_loss_MV, variables)
-    #     # self.optimizer.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
-
-    #     # with tf.GradientTape() as tape_mc:
-    #     #     train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, psnr = self(x, training=True)
-
-    #     # variables = self.trainable_variables
-    #     # gradients = tape_mc.gradient(train_loss_MC, variables)
-    #     # self.optimizer.apply_gradients((grad, var) for (grad, var) in zip(gradients, variables) if grad is not None)
-
-    
-    #     return {m.name: m.result() for m in [self.train_loss_ME, self.train_loss_MV, self.train_loss_MC, self.ME_mse, self.warp_mse, self.MC_mse, self.train_bpp_MV, self.train_bpp_Res, self.psnr]}
-    # def test_step(self, x):
-
-    #     train_loss_ME, train_loss_MV, train_loss_MC, ME_mse, warp_mse, MC_mse, train_bpp_MV, train_bpp_Res, psnr = self(x, training=False)
-
-    #     self.train_loss_ME.update_state(train_loss_ME)
-    #     self.ME_mse.update_state(ME_mse)
-
-    #     self.train_loss_MV.update_state(train_loss_MV)
-    #     self.warp_mse.update_state(warp_mse)
-
-    #     self.train_loss_MC.update_state(train_loss_MC)
-    #     self.MC_mse.update_state(MC_mse)
-
-    #     self.train_bpp_MV.update_state(train_bpp_MV)
-    #     self.train_bpp_Res.update_state(train_bpp_Res)
-        
-    #     self.psnr.update_state(psnr)
-        
-    #     return {m.name: m.result() for m in  [self.train_loss_ME, self.train_loss_MV, self.train_loss_MC, self.ME_mse, self.warp_mse, self.MC_mse, self.train_bpp_MV, self.train_bpp_Res, self.psnr]}
-
     @tf.function(input_signature=[
         tf.TensorSpec(shape=(240, 240, 3), dtype=tf.uint8),
         tf.TensorSpec(shape=(240, 240, 3), dtype=tf.uint8),
@@ -363,8 +267,8 @@ class OpenDVC(tf.keras.Model):
         print("in the compress")
         Y0_com = tf.expand_dims(Y0_com, 0)
         Y1_raw = tf.expand_dims(Y1_raw, 0)
-        Y0_com = tf.cast(Y0_com, dtype=tf.float32)
-        Y1_raw = tf.cast(Y1_raw, dtype=tf.float32)
+        Y0_com = tf.cast(Y0_com / 255, dtype=tf.float32)
+        Y1_raw = tf.cast(Y1_raw / 255, dtype=tf.float32)
 
         flow_tensor = self.optical_flow([Y0_com, Y1_raw])
         # print("flow_tensor ", flow_tensor.shape)
@@ -403,7 +307,7 @@ class OpenDVC(tf.keras.Model):
         """Decompresses an image."""
         print("in decompress")
         ref_frame = tf.expand_dims(ref_frame, 0)
-        Y0_com = tf.cast(ref_frame, dtype=tf.float32)
+        Y0_com = tf.cast(ref_frame / 255, dtype=tf.float32)
 
         flow_latent_hat = self.entropy_model_mv.decompress(mv_str_bits, y_shape)
         flow_hat = self.mv_synthesis_transform(flow_latent_hat)
@@ -415,28 +319,10 @@ class OpenDVC(tf.keras.Model):
         Y1_dcom = Res_hat + Y1_MC
 
         # Remove batch dimension, and crop away any extraneous padding.
-        x_hat = Y1_dcom[0, :x_shape[0], :x_shape[1], :]
+        x_hat = Y1_dcom[0, :x_shape[0], :x_shape[1], :] * 255
         # Then cast back to 8-bit integer.
         return tf.saturate_cast(tf.round(x_hat), tf.uint8)
 
-    # def compile(self, freeze, **kwargs):
-    #     super().compile(loss=None, metrics=None, loss_weights=None, weighted_metrics=None, **kwargs,)
-        
-    #     self.train_loss_ME = tf.keras.metrics.Mean(name="train_loss_ME")
-    #     self.train_loss_MV = tf.keras.metrics.Mean(name="train_loss_MV")
-    #     self.train_loss_MC = tf.keras.metrics.Mean(name="train_loss_MC")
-
-    #     self.psnr = tf.keras.metrics.Mean(name="psnr")
-    #     self.ME_mse = tf.keras.metrics.Mean(name="ME_mse")
-    #     self.warp_mse = tf.keras.metrics.Mean(name="warp_mse")
-    #     self.MC_mse = tf.keras.metrics.Mean(name="MC_mse")
-
-    #     self.train_bpp_MV = tf.keras.metrics.Mean(name="bpp_MV")
-    #     self.train_bpp_Res = tf.keras.metrics.Mean(name="bpp_Res")
-
-    #     self.iter = 0
-    #     for layer_idx in freeze:
-    #         self.layers[layer_idx].trainable = False
     def compile(self, **kwargs):
         super().compile(
             loss=None,
@@ -463,6 +349,8 @@ class OpenDVC(tf.keras.Model):
     def predict_step(self, x):
         raise NotImplementedError("Prediction API is not supported.")
 
+
+
 def read_png_resize(filename, width, height):
     """Loads a PNG image file."""
     string = tf.io.read_file(filename)
@@ -487,7 +375,7 @@ def compress(model, input_i, input_p, output_bin, width=240, height=240):
     # model = tf.keras.models.load_model(args.model_path)
     print("compress")
     Y0_com = read_png_crop(input_i, width, height)
-    Y1_raw = read_png_crop(input_p, width, height)
+    Y1_raw = read_png_crop(input_p, width, height) 
 
     tensors = model.compress(Y0_com, Y1_raw)
     
@@ -528,9 +416,6 @@ class Arguments(object):
         self.backup_restore = "backup/"
 
 
-class MemoryCallback(tf.keras.callbacks.Callback):
-    def on_epoch_end(self, epoch, log={}):
-        print("[MemoryCallback]: ", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 
 if __name__ == "__main__":
