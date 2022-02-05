@@ -1,3 +1,4 @@
+from cv2 import norm
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras
@@ -9,7 +10,7 @@ import fnmatch
 
 class DataVimeo90kGenerator(tf.keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, np_folder, samples=32, dim=(240,240,32), n_channels=3, shuffle=True, I_QP=27): 
+    def __init__(self, np_folder, samples=32, dim=(240,240,32), n_channels=3, shuffle=True, I_QP=27, norm=False): 
         'Initialization'
         self.dim = dim
         self.samples = samples
@@ -17,6 +18,7 @@ class DataVimeo90kGenerator(tf.keras.utils.Sequence):
         self.n_channels = n_channels
         self.shuffle = shuffle
         self.i_qp = I_QP
+        self.norm = norm
         self.on_epoch_end()
 
     def __len__(self):
@@ -56,8 +58,13 @@ class DataVimeo90kGenerator(tf.keras.utils.Sequence):
             else:
                 img_ref = load.read_png_crop_np(path + 'im' + str(1) + '.png', Width, Height) 
                 img_cur = load.read_png_crop_np(path + 'im' + str(f + 1) + '.png', Width, Height)
-            X0[sample,] = img_ref / 255
-            X1[sample,] = img_cur / 255
+
+            if self.norm:
+                img_ref = img_ref / 255
+                img_cur = img_cur / 255
+
+            X0[sample,] = img_ref
+            X1[sample,] = img_cur
 
         # data.append()     
             # data_out.append(tf.expand_dims(img_cur/255, 0))
