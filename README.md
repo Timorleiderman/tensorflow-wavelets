@@ -79,6 +79,8 @@ model.summary()
 ### functional example with Sure Threshold
 ```
 from tensorflow.keras import layers
+from tensorflow.keras.models import Model
+
 x_inp = layers.Input(shape=(512, 512, 1))
 x = DMWT("ghm")(x_inp)
 x = Threshold.Threshold(algo='sure', mode='hard')(x) # use "soft" or "hard"
