@@ -12,7 +12,7 @@ class DTCWT(layers.Layer):
     Durel Tree Complex Wavelet Transform
     Input: level - tree-level (int)
     """
-    def __init__(self, level=1, **kwargs):
+    def __init__(self, level=1, concat=True, **kwargs):
         super(DTCWT, self).__init__(**kwargs)
 
         if level <= 1:
@@ -33,6 +33,7 @@ class DTCWT(layers.Layer):
         self.af = duel_filter_tf(af)
         self.sf = duel_filter_tf(sf)
 
+        self.concat = concat
     def build(self, input_shape):
         # repeat last channel if input channel bigger then 1
         if input_shape[-1] > 1:
@@ -69,6 +70,8 @@ class DTCWT(layers.Layer):
         # concat into one big image
         # different resolution as the tree is deeper
         # TODO: How to split different resolutions into different channels
+        if not self.concat:
+            return w
         j = 1
         w_c = w
 
@@ -101,7 +104,7 @@ class IDTCWT(layers.Layer):
     Inverse Duel Tree Complex Wavelet Transform
     Input: level - tree-level (int)
     """
-    def __init__(self, level=1, **kwargs):
+    def __init__(self, level=1, caoncatenated=True, **kwargs):
         super(IDTCWT, self).__init__(**kwargs)
 
         if level <= 1:
@@ -121,6 +124,7 @@ class IDTCWT(layers.Layer):
         self.af = duel_filter_tf(af)
         self.sf = duel_filter_tf(sf)
 
+        self.caoncatenated = caoncatenated
     def build(self, input_shape):
         # repeat last channel if input channel bigger then 1
         if input_shape[-1] > 1:
@@ -132,7 +136,11 @@ class IDTCWT(layers.Layer):
     def call(self, inputs, training=None, mask=None):
 
         # convert one big image into list of tree levels
-        w_rec = reconstruct_w_leveln(inputs, self.level)
+        
+        if self.caoncatenated:
+            w_rec = reconstruct_w_leveln(inputs, self.level)
+        else:
+            w_rec = inputs
 
         height = int(w_rec[0][0][0][0].shape[1]*2)
         width = int(w_rec[0][0][0][0].shape[2]*2)
