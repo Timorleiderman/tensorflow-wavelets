@@ -10,6 +10,13 @@ def split_to_ll_lhhlhh(data):
     return [ll, lhhlhh]
 
 
+def split_mwt_to_lllhhlhh(data):
+    ll = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)[0]
+    lh = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)[1]
+    hl = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)[0]
+    hh = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)[1]
+    return [ll, lh, hl, hh]
+
 def reconstruct_w_leveln(w, level):
     w_rec = [[[[], []] for _ in range(2)] for __ in range(level+1)]
     ws01 = tf.split(tf.split(w, 2, axis=1)[0], 2, axis=2)
