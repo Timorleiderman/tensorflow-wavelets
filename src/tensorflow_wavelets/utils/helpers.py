@@ -2,6 +2,15 @@ import tensorflow as tf
 from tensorflow_wavelets.utils.cast import *
 
 
+
+def split_wt_to_lllhhlhh(data):
+    ll = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)[0]
+    lh = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)[1]
+    hl = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)[0]
+    hh = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)[1]
+    return [ll, lh, hl, hh]
+
+
 def split_to_ll_lhhlhh(data):
     split_0 = tf.split(tf.split(data, 2, axis=1)[0], 2, axis=2)
     split_1 = tf.split(tf.split(data, 2, axis=1)[1], 2, axis=2)
