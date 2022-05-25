@@ -31,3 +31,4 @@ please_save.somthing.data-00000-of-00001
 *.gz
 *.v2
 *.profile-empty
+*.deb
