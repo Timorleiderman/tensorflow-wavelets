@@ -113,8 +113,8 @@ class IDWT(layers.Layer):
     Inverse Discrete Wavelet Transform - Tensorflow - keras
     Inputs:
         name - wavelet name ( from pywavelet library)
-        splited - 0 - not splitted One channel input([[ll , lh],[hl, hh]])
-                  1 - splitted 4 channels input([ll , lh, hl ,hh])
+        concat - 1 - not splitted One channel input([[ll , lh],[hl, hh]])
+                  0 - splitted 4 channels input([ll , lh, hl ,hh])
     """
     def __init__(self, wavelet_name='haar', concat=1, **kwargs):
         super(IDWT, self).__init__(**kwargs)
