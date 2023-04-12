@@ -1,5 +1,6 @@
 import cv2
 import unittest
+import os
 
 from tensorflow_wavelets.utils.models import *
 from tensorflow_wavelets.utils.mse import *
@@ -20,42 +21,54 @@ class TestSrc(unittest.TestCase):
         if not change the path of lenna_input_path
     '''
     lenna_input_path = "../Development/input/LennaGrey.png"
-
+    
     def test_dwt_idwt_sof_thresh(self):
 
         img = cv2.imread(self.lenna_input_path, 0)
-        self.assertIsNotNone(img, "LennaGrey.png not flound in " + self.lenna_input_path)
+        self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
         model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 3.5
-        self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
+        self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
 
     def test_dwt_idwt_hard_thresh(self):
 
         img = cv2.imread(self.lenna_input_path, 0)
-        self.assertIsNotNone(img, "LennaGrey.png not flound in " + self.lenna_input_path)
+        self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
         model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 3.5
-        self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
+        self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
 
     def test_dwt_idwt(self):
 
         img = cv2.imread(self.lenna_input_path, 0)
-        self.assertIsNotNone(img, "LennaGrey.png not flound in " + self.lenna_input_path)
+        self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
         model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False)
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 1e-3
-        self.assertLess(mse(img, rec), mse_lim, "Should be less then" + str(mse_lim))
+        self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
+
+    def test_dwt_idwt_not_concat(self):
+
+        img = cv2.imread(self.lenna_input_path, 0)
+        self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
+        img_ex1 = np.expand_dims(img, axis=-1)
+        img_ex2 = np.expand_dims(img_ex1, axis=0)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False, concat = False)
+        rec = model.predict(img_ex2)
+        rec = rec[0, ..., 0]
+        mse_lim = 1e-3
+        self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
 
     def test_basic_train_mnist(self):
         (x_train, y_train), (x_test, y_test) = load_mnist(remove_n_samples=1000)

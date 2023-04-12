@@ -116,12 +116,12 @@ class IDWT(layers.Layer):
         splited - 0 - not splitted One channel input([[ll , lh],[hl, hh]])
                   1 - splitted 4 channels input([ll , lh, hl ,hh])
     """
-    def __init__(self, wavelet_name='haar', splited=0, **kwargs):
+    def __init__(self, wavelet_name='haar', concat=1, **kwargs):
         super(IDWT, self).__init__(**kwargs)
         # self._name = self.name + "_" + name
         self.pad_type = "VALID"
         self.border_pad = "SYMMETRIC"
-        self.splited = splited
+        self.concat = concat
         # get filter coeffs from 3rd party lib
         wavelet = pywt.Wavelet(wavelet_name)
         self.rec_len = wavelet.rec_len
@@ -139,8 +139,12 @@ class IDWT(layers.Layer):
 
     def call(self, inputs, training=None, mask=None):
 
-        if self.splited == 1:
-            x = inputs
+        if self.concat == 0:
+            ll = tf.expand_dims(inputs[:,:,:,0], axis = -1)
+            lh = tf.expand_dims(inputs[:,:,:,1], axis = -1)
+            hl = tf.expand_dims(inputs[:,:,:,2], axis = -1)
+            hh = tf.expand_dims(inputs[:,:,:,3], axis = -1)
+            x = tf.concat([ll, hl, lh, hh], axis=-1)
         else:
             ll_lh_hl_hh = tf.split(inputs, 2, axis=1)
             ll_lh = tf.split(ll_lh_hl_hh[0], 2, axis=2)
