@@ -110,6 +110,7 @@ model.summary()
 pip install --upgrade build
 pip install --upgrade twine
 python -m build
+python -m twine upload --repository pypi dist/*
 
 ```
 **Free Software, Hell Yeah!**
