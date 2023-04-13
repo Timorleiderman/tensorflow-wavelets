@@ -1,6 +1,7 @@
+import os
 import cv2
 import unittest
-import os
+
 
 from tensorflow_wavelets.utils.models import *
 from tensorflow_wavelets.utils.mse import *

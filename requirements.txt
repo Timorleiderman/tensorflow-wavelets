@@ -1,10 +1,12 @@
 scipy==1.5.2
 matplotlib~=3.4.3
-tensorflow~=2.6.0
-keras~=2.9.0
+tensorflow==2.6.1
+keras==2.6
 psnr-hvsm==0.1.0
 opencv-python
 scikit-image
 pywavelets
-tensorflow_probability~=0.19.0
-numpy~=1.21.6
+tensorflow_probability==0.14.1
+numpy==1.19.2
+ipykernel
+protobuf==3.20.3

@@ -9,15 +9,16 @@ tensorflow-wavelets is an implementation of Custom Layers for Neural Networks:
 ```
 git clone https://github.com/Timorleiderman/tensorflow-wavelets.git
 cd tensorflow-wavelets
-git submodule update --init --recursive
+pip install -r requirements.txt
 ```
 ## Installation
-
+#### tested with python 3.8
 ```
 pip install tensorflow-wavelets
 ```
 # Usage
 ```
+from tensorflow import keras
 import tensorflow_wavelets.Layers.DWT as DWT
 import tensorflow_wavelets.Layers.DTCWT as DTCWT
 import tensorflow_wavelets.Layers.DMWT as DMWT
@@ -59,8 +60,8 @@ model.summary()
 ```
 
 model = keras.Sequential()
-model.add(layers.InputLayer(input_shape=(28, 28, 1)))
-model.add(DWT(name="db4", concat=1))
+model.add(keras.layers.InputLayer(input_shape=(28, 28, 1)))
+model.add(DWT.DWT(name="db4", concat=1))
 model.summary()
 ```
 
@@ -78,14 +79,12 @@ model.summary()
 # DMWT
 ### functional example with Sure Threshold
 ```
-from tensorflow.keras import layers
-from tensorflow.keras.models import Model
 
-x_inp = layers.Input(shape=(512, 512, 1))
-x = DMWT("ghm")(x_inp)
+x_inp = keras.layers.Input(shape=(512, 512, 1))
+x = DMWT.DMWT("ghm")(x_inp)
 x = Threshold.Threshold(algo='sure', mode='hard')(x) # use "soft" or "hard"
-x = IDMWT("ghm")(x)
-model = Model(x_inp, x, name="MyModel")
+x = DMWT.IDMWT("ghm")(x)
+model = keras.models.Model(x_inp, x, name="MyModel")
 model.summary()
 ```
     Model: "MyModel"
@@ -105,4 +104,12 @@ model.summary()
     Non-trainable params: 0
     _________________________________________________________________
 
+
+## PyPi upload:
+```
+pip install --upgrade build
+pip install --upgrade twine
+python -m build
+
+```
 **Free Software, Hell Yeah!**
