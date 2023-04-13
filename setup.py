@@ -5,13 +5,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="tensorflow-wavelets",
-    version="1.0.28",
+    version="1.0.29",
     author="Timor Leiderman",
     author_email="Timorleiderman@gmail.com",
     description="Tensorflow wavelet Layers",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://https://github.com/Timorleiderman/tensorflow-wavelets",
+    url="https://github.com/Timorleiderman/tensorflow-wavelets",
     project_urls={
         "Bug Tracker": "https://github.com/Timorleiderman/tensorflow-wavelets/issues",
     },
