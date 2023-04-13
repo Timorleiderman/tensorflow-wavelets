@@ -10,8 +10,8 @@ logs
 *.gif
 output/*
 *.mat
-!Development/input/LennaGrey.png
-!Development/input/Lenna_orig.png
+!src/input/LennaGrey.png
+!src/input/Lenna_orig.png
 dist/*
 venv/*
 *.egg-info*

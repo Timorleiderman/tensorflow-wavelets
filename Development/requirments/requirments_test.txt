@@ -1,3 +1,0 @@
-opencv-python
-PyWavelets
-tensorflow-compression

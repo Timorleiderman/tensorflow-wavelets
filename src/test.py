@@ -21,7 +21,7 @@ class TestSrc(unittest.TestCase):
         run from src dir.
         if not change the path of lenna_input_path
     '''
-    lenna_input_path = "../Development/input/LennaGrey.png"
+    lenna_input_path = "../src/input/LennaGrey.png"
     
     def test_dwt_idwt_sof_thresh(self):
 

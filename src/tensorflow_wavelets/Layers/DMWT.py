@@ -92,7 +92,7 @@ if __name__ == "__main__":
     import numpy as np
     from tensorflow_wavelets.utils.mse import mse
 
-    img = cv2.imread("../../../Development/input/LennaGrey.png", 0)
+    img = cv2.imread("../../../src/input/LennaGrey.png", 0)
     img_ex1 = np.expand_dims(img, axis=0)
     img_ex1 = np.expand_dims(img_ex1, axis=-1)
 

@@ -214,7 +214,7 @@ if __name__ == "__main__":
     # model.summary()
 
     name = "db2"
-    img = cv2.imread("../../../Development/input/LennaGrey.png", 0)
+    img = cv2.imread("../../../src/input/LennaGrey.png", 0)
     # img = cv2.imread("../input/Lenna_orig.png",0)
     img_ex1 = np.expand_dims(img, axis=-1)
     img_ex2 = np.expand_dims(img_ex1, axis=0)
