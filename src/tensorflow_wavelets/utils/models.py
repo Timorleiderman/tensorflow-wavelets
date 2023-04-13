@@ -8,14 +8,14 @@ import tensorflow_wavelets.Layers.Threshold as Activation
 from tensorflow.keras.models import Model
 
 
-def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft', algo='sure'):
+def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft', algo='sure', concat = True):
     # load DWT IDWT model
     model = keras.Sequential()
     model.add(layers.InputLayer(input_shape=input_shape))
-    model.add(DWT.DWT(wavelet_name=wave_name))
+    model.add(DWT.DWT(wavelet_name=wave_name, concat = concat))
     if theshold:
         model.add(Activation.Threshold(algo=algo, mode=mode))
-    model.add(DWT.IDWT(wavelet_name=wave_name))
+    model.add(DWT.IDWT(wavelet_name=wave_name, concat = concat))
 
     # for debug with break points
     model.run_eagerly = eagerly

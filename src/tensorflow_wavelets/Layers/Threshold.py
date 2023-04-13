@@ -87,7 +87,7 @@ if __name__ == "__main__":
     x_inp = layers.Input(shape=(h, w, c))
     x = DWT.DWT(name="db2", concat=1)(x_inp)
     x = Threshold(algo='sure', mode='soft')(x)
-    x = DWT.IDWT(name="db2", splited=0)(x)
+    x = DWT.IDWT(name="db2", concat=1)(x)
     model = Model(x_inp, x, name="mymodel")
     model.run_eagerly = True
     model.summary()
