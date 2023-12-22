@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras.layers import AveragePooling2D
+
 import tensorflow_wavelets.Layers.DWT as DWT
 import tensorflow_wavelets.Layers.DMWT as DMWT
 import tensorflow_wavelets.Layers.DTCWT as DTCWT
@@ -98,3 +100,29 @@ class AutocodeBasicDWT(Model):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
         return decoded
+    
+
+
+class AveragePooling2DPyramid(tf.keras.Model):
+    """ 
+    """
+    def __init__(self, batch_size, width, height,  **kwargs):
+        super(AveragePooling2DPyramid, self).__init__(**kwargs)
+        self.batch_size = batch_size
+        self.width = width
+        self.height = height
+
+    def build(self, input_shape):
+        super(AveragePooling2DPyramid, self).build(input_shape)
+        
+    def call(self, inputs, training=None, mask=None):
+        
+        im1_4 = inputs
+        im1_3 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_4)
+        im1_2 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_3)
+        im1_1 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_2)
+        im1_0 = AveragePooling2D(pool_size=2, strides=2, padding='same')(im1_1)
+
+        return im1_0, im1_1, im1_2, im1_3
+    
+    
