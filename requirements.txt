@@ -10,3 +10,4 @@ tensorflow_probability==0.14.1
 numpy==1.19.2
 ipykernel
 protobuf==3.20.3
+pandas==1.4
