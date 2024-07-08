@@ -21,6 +21,7 @@ class DWT(layers.Layer):
         # self._name = self.name + "_" + name
         # get filter coeffs from 3rd party lib
         wavelet = pywt.Wavelet(wavelet_name)
+        self.wavelet_name = wavelet_name
         self.dec_len = wavelet.dec_len
         self.concat = concat
         # decomposition filter low pass and hight pass coeffs
