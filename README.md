@@ -113,4 +113,22 @@ python -m build
 python -m twine upload --repository pypi dist/*
 
 ```
+
+If our open source codes are helpful for your research, please cite our
+[technical report:](https://www.mdpi.com/1099-4300/26/10/836)
+```
+@Article{e26100836,
+AUTHOR = {Leiderman, Timor and Ben Ezra, Yosef},
+TITLE = {Information Bottleneck Driven Deep Video Compression—IBOpenDVCW},
+JOURNAL = {Entropy},
+VOLUME = {26},
+YEAR = {2024},
+NUMBER = {10},
+ARTICLE-NUMBER = {836},
+URL = {https://www.mdpi.com/1099-4300/26/10/836},
+ISSN = {1099-4300},
+DOI = {10.3390/e26100836}
+}
+```
+
 **Free Software, Hell Yeah!**
