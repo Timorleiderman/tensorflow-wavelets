@@ -23,7 +23,6 @@ class TestSrc(unittest.TestCase):
     '''
     lenna_input_path = "../src/input/LennaGrey.png"
     
-    def test_dwt_idwt_sof_thresh(self):
     def test_dwt_idwt_hard_thresh(self):
 
         img = cv2.imread(self.lenna_input_path, 0)
