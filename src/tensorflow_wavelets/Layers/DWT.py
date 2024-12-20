@@ -125,6 +125,7 @@ class IDWT(layers.Layer):
         self.concat = concat
         # get filter coeffs from 3rd party lib
         wavelet = pywt.Wavelet(wavelet_name)
+        self.wavelet_name = wavelet_name
         self.rec_len = wavelet.rec_len
 
         # decomposition filter low pass and hight pass coeffs

@@ -24,17 +24,6 @@ class TestSrc(unittest.TestCase):
     lenna_input_path = "../src/input/LennaGrey.png"
     
     def test_dwt_idwt_sof_thresh(self):
-
-        img = cv2.imread(self.lenna_input_path, 0)
-        self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
-        img_ex1 = np.expand_dims(img, axis=-1)
-        img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
-        rec = model.predict(img_ex2)
-        rec = rec[0, ..., 0]
-        mse_lim = 3.5
-        self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
-
     def test_dwt_idwt_hard_thresh(self):
 
         img = cv2.imread(self.lenna_input_path, 0)
@@ -104,5 +93,27 @@ class TestSrc(unittest.TestCase):
         self.assertLess(test_loss, 0.8, "test loss should be less then 0.8")
 
 
+    def test_dwt_idwt_sof_thresh(self):
+
+        img = cv2.imread(self.lenna_input_path, 0)
+        self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
+        img_ex1 = np.expand_dims(img, axis=-1)
+        img_ex2 = np.expand_dims(img_ex1, axis=0)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
+        rec = model.predict(img_ex2)
+        rec = rec[0, ..., 0]
+        mse_lim = 3.5
+        self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
+
+    def test_shapes(self):
+        transform = DWT.DWT(name='db4', concat=0)
+        inverse = DWT.IDWT(name='db4', concat=0)
+        ones = tf.ones((1, 160, 64, 1))
+        output = transform(ones)
+        inverted = inverse(output)
+        print(output.shape)
+        print(inverted.shape)
+        self.assertEqual(ones.shape, inverted.shape)
+        
 if __name__ == '__main__':
     unittest.main()

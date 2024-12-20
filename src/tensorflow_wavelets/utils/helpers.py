@@ -267,7 +267,7 @@ def upsampler2d(x):
     # stack both tensors
     stack_rows = tf.stack([x, zero_tensor], axis=3)
     # reshape for zero insertion between the rows
-    stack_rows = tf.reshape(stack_rows, shape=[-1, x.shape[1], x.shape[2]*2, x.shape[3]])
+    stack_rows = tf.reshape(stack_rows, shape=[-1, x.shape[2], x.shape[1]*2, x.shape[3]])
     # transpose in order to insert zeros for the columns
     stack_rows = tf.transpose(stack_rows, perm=[0, 2, 1, 3])
     # create zero like tensor but now like the padded one
@@ -275,7 +275,7 @@ def upsampler2d(x):
     # stack both tensors
     stack_rows_cols = tf.stack([stack_rows, zero_tensor_1], axis=3)
     # reshape for zero insertion between the columns
-    us_padded = tf.reshape(stack_rows_cols, shape=[-1, x.shape[1]*2, x.shape[2]*2, x.shape[3]])
+    us_padded = tf.reshape(stack_rows_cols, shape=[-1, x.shape[2]*2, x.shape[1]*2, x.shape[3]])
     # transpose back to normal
     us_padded = tf.transpose(us_padded, perm=[0, 2, 1, 3])
     return us_padded
