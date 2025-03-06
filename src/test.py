@@ -29,7 +29,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard', algo='sure')
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=True, mode='hard', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 3.5
@@ -41,7 +41,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=False)
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 1e-3
@@ -76,7 +76,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False, concat = False)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=False, concat = False)
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 1e-3
@@ -121,7 +121,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=True, mode='soft', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 3.5
