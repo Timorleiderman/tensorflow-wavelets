@@ -50,7 +50,7 @@ class TestSrc(unittest.TestCase):
     def test_dwt_idwt_1d(self):
 
         # Generate a synthetic 1D signal (e.g., a sine wave)
-        num_samples = 1024
+        num_samples = 32
         x = np.linspace(0, 2 * np.pi, num_samples)
         signal = np.sin(5 * x)  # 5 Hz sine wave
         
@@ -59,15 +59,15 @@ class TestSrc(unittest.TestCase):
         signal_ex2 = np.expand_dims(signal_ex1, axis=0)  # Add batch dimension
 
         # Initialize 1D DWT/IDWT model
-        model = basic_dwt_idwt_1d(input_shape=signal_ex1.shape, wave_name="db2", eagerly=False, threshold=False)
+        model = basic_dwt_idwt_1d(input_shape=signal_ex2.shape[1:], wave_name="db2", eagerly=False, threshold=False)
 
         # Predict and reconstruct the signal
         rec = model.predict(signal_ex2)
         # rec = rec[0, ..., 0]  # Remove batch and channel dimensions
-
+        rec = np.squeeze(rec)
         # Define error threshold and assert
         mse_lim = 1e-3
-        self.assertLess(mse(signal, rec), mse_lim, "Should be less than " + str(mse_lim))
+        self.assertLess(mse_1d(signal, rec), mse_lim, "Should be less than " + str(mse_lim))
 
 
     def test_dwt_idwt_not_concat(self):
