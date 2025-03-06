@@ -30,7 +30,7 @@ def basic_dwt_idwt_1d(input_shape, wave_name="db2", eagerly=False, threshold=Tru
     model.add(DWT.DWT1D(wavelet_name=wave_name))
     if threshold:
         model.add(Activation.Threshold(algo=algo, mode=mode))
-    model.add(DWT.DWT1D(wavelet_name=wave_name))
+    model.add(DWT.IDWT1D(wavelet_name=wave_name))
 
     # for debug with break points
     model.run_eagerly = eagerly
