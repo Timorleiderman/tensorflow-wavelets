@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="tensorflow-wavelets",
-    version="1.0.31",
+    version="1.1.0",
     author="Timor Leiderman",
     author_email="Timorleiderman@gmail.com",
     description="Tensorflow wavelet Layers",

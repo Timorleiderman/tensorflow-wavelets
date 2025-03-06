@@ -10,12 +10,12 @@ import tensorflow_wavelets.Layers.Threshold as Activation
 from tensorflow.keras.models import Model
 
 
-def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, mode='soft', algo='sure', concat = True):
+def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, threshold=True, mode='soft', algo='sure', concat = True):
     # load DWT IDWT model
     model = keras.Sequential()
     model.add(layers.InputLayer(input_shape=input_shape))
     model.add(DWT.DWT(wavelet_name=wave_name, concat = concat))
-    if theshold:
+    if threshold:
         model.add(Activation.Threshold(algo=algo, mode=mode))
     model.add(DWT.IDWT(wavelet_name=wave_name, concat = concat))
 
@@ -23,6 +23,18 @@ def basic_dwt_idwt(input_shape, wave_name="db2", eagerly=False, theshold=True, m
     model.run_eagerly = eagerly
     return model
 
+def basic_dwt_idwt_1d(input_shape, wave_name="db2", eagerly=False, threshold=True, mode='soft', algo='sure', concat = True):
+    # load DWT IDWT model
+    model = keras.Sequential()
+    model.add(layers.InputLayer(input_shape=input_shape))
+    model.add(DWT.DWT1D(wavelet_name=wave_name))
+    if threshold:
+        model.add(Activation.Threshold(algo=algo, mode=mode))
+    model.add(DWT.IDWT1D(wavelet_name=wave_name))
+
+    # for debug with break points
+    model.run_eagerly = eagerly
+    return model
 
 def basic_dmwt(input_shape, nb_classes=10, wave_name="ghm", eagerly=False):
 

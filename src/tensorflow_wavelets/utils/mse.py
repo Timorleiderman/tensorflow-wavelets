@@ -7,3 +7,7 @@ def mse(imageA, imageB):
     err /= float(imageA.shape[0] * imageA.shape[1])
 
     return err
+
+def mse_1d(a, b):
+    """Mean Squared Error calculation."""
+    return np.mean((a - b) ** 2)

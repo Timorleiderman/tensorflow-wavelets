@@ -29,7 +29,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='hard', algo='sure')
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=True, mode='hard', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 3.5
@@ -41,11 +41,34 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=False)
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 1e-3
         self.assertLess(mse(img, rec), mse_lim, "Should be less than " + str(mse_lim))
+
+    def test_dwt_idwt_1d(self):
+
+        # Generate a synthetic 1D signal (e.g., a sine wave)
+        num_samples = 32
+        x = np.linspace(0, 2 * np.pi, num_samples)
+        signal = np.sin(5 * x)  # 5 Hz sine wave
+        
+        # Expand dimensions to match model input requirements
+        signal_ex1 = np.expand_dims(signal, axis=-1)  # Add channel dimension
+        signal_ex2 = np.expand_dims(signal_ex1, axis=0)  # Add batch dimension
+
+        # Initialize 1D DWT/IDWT model
+        model = basic_dwt_idwt_1d(input_shape=signal_ex2.shape[1:], wave_name="db2", eagerly=False, threshold=False)
+
+        # Predict and reconstruct the signal
+        rec = model.predict(signal_ex2)
+        # rec = rec[0, ..., 0]  # Remove batch and channel dimensions
+        rec = np.squeeze(rec)
+        # Define error threshold and assert
+        mse_lim = 1e-3
+        self.assertLess(mse_1d(signal, rec), mse_lim, "Should be less than " + str(mse_lim))
+
 
     def test_dwt_idwt_not_concat(self):
 
@@ -53,7 +76,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=False, concat = False)
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=False, concat = False)
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 1e-3
@@ -98,7 +121,7 @@ class TestSrc(unittest.TestCase):
         self.assertIsNotNone(img, "LennaGrey.png not found in " + self.lenna_input_path)
         img_ex1 = np.expand_dims(img, axis=-1)
         img_ex2 = np.expand_dims(img_ex1, axis=0)
-        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, theshold=True, mode='soft', algo='sure')
+        model = basic_dwt_idwt(input_shape=img_ex1.shape, wave_name="db2", eagerly=True, threshold=True, mode='soft', algo='sure')
         rec = model.predict(img_ex2)
         rec = rec[0, ..., 0]
         mse_lim = 3.5

@@ -32,3 +32,4 @@ please_save.somthing.data-00000-of-00001
 *.v2
 *.profile-empty
 *.deb
+.vscode/*

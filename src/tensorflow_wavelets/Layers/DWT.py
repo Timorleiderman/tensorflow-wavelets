@@ -25,15 +25,15 @@ class DWT(layers.Layer):
         self.dec_len = wavelet.dec_len
         self.concat = concat
         # decomposition filter low pass and hight pass coeffs
-        db2_lpf = wavelet.dec_lo
-        db2_hpf = wavelet.dec_hi
+        dec_lpf = wavelet.dec_lo
+        dec_hpf = wavelet.dec_hi
 
         # covert filters into tensors and reshape for convolution math
-        db2_lpf = tf.constant(db2_lpf[::-1])
-        self.db2_lpf = tf.reshape(db2_lpf, (1, wavelet.dec_len, 1, 1))
+        dec_lpf = tf.constant(dec_lpf[::-1])
+        self.dec_lpf = tf.reshape(dec_lpf, (1, wavelet.dec_len, 1, 1))
 
-        db2_hpf = tf.constant(db2_hpf[::-1])
-        self.db2_hpf = tf.reshape(db2_hpf, (1, wavelet.dec_len, 1, 1))
+        dec_hpf = tf.constant(dec_hpf[::-1])
+        self.dec_hpf = tf.reshape(dec_hpf, (1, wavelet.dec_len, 1, 1))
 
         self.conv_type = "VALID"
         self.border_padd = "SYMMETRIC"
@@ -42,9 +42,9 @@ class DWT(layers.Layer):
         # filter dims should be bigger if input is not gray scale
         if input_shape[-1] != 1:
             # self.db2_lpf = tf.repeat(self.db2_lpf, input_shape[-1], axis=-1)
-            self.db2_lpf = tf.keras.backend.repeat_elements(self.db2_lpf, input_shape[-1], axis=-1)
+            self.dec_lpf = tf.keras.backend.repeat_elements(self.dec_lpf, input_shape[-1], axis=-1)
             # self.db2_hpf = tf.repeat(self.db2_hpf, input_shape[-1], axis=-1)
-            self.db2_hpf = tf.keras.backend.repeat_elements(self.db2_hpf, input_shape[-1], axis=-1)
+            self.dec_hpf = tf.keras.backend.repeat_elements(self.dec_hpf, input_shape[-1], axis=-1)
 
     def call(self, inputs, training=None, mask=None):
 
@@ -53,11 +53,11 @@ class DWT(layers.Layer):
 
         # approximation conv only rows
         a = tf.nn.conv2d(
-            inputs_pad, self.db2_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
+            inputs_pad, self.dec_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
         # details conv only rows
         d = tf.nn.conv2d(
-            inputs_pad, self.db2_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
+            inputs_pad, self.dec_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
         # ds - down sample
         a_ds = a[:, :, 1:a.shape[2]:2, :]
@@ -74,19 +74,19 @@ class DWT(layers.Layer):
 
         # aa approximation approximation
         aa = tf.nn.conv2d(
-            a_ds_pad, self.db2_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
+            a_ds_pad, self.dec_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
         # ad approximation details
         ad = tf.nn.conv2d(
-            a_ds_pad, self.db2_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
+            a_ds_pad, self.dec_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
         # ad details aproximation
         da = tf.nn.conv2d(
-            d_ds_pad, self.db2_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
+            d_ds_pad, self.dec_lpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
         # dd details details
         dd = tf.nn.conv2d(
-            d_ds_pad, self.db2_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
+            d_ds_pad, self.dec_hpf, padding=self.conv_type, strides=[1, 1, 1, 1],
         )
 
         # transpose back the matrix
@@ -129,15 +129,15 @@ class IDWT(layers.Layer):
         self.rec_len = wavelet.rec_len
 
         # decomposition filter low pass and hight pass coeffs
-        db2_lpf = wavelet.rec_lo
-        db2_hpf = wavelet.rec_hi
+        rec_lpf = wavelet.rec_lo
+        rec_hpf = wavelet.rec_hi
 
         # covert filters into tensors and reshape for convolution math
-        db2_lpf = tf.constant(db2_lpf[::-1])
-        self.db2_lpf = tf.reshape(db2_lpf, (1, wavelet.rec_len, 1, 1))
+        rec_lpf = tf.constant(rec_lpf[::-1])
+        self.rec_lpf = tf.reshape(rec_lpf, (1, wavelet.rec_len, 1, 1))
 
-        db2_hpf = tf.constant(db2_hpf[::-1])
-        self.db2_hpf = tf.reshape(db2_hpf, (1, wavelet.rec_len, 1, 1))
+        rec_hpf = tf.constant(rec_hpf[::-1])
+        self.rec_hpf = tf.reshape(rec_hpf, (1, wavelet.rec_len, 1, 1))
 
     def call(self, inputs, training=None, mask=None):
 
@@ -185,10 +185,10 @@ class IDWT(layers.Layer):
         # convolution for the column
         # transpose back to normal
 
-        ll_conv_lpf_lpf_tr = conv_tr_conv_tr(ll_us_pad, self.db2_lpf, self.db2_lpf, self.pad_type)
-        lh_conv_lpf_hpf_tr = conv_tr_conv_tr(lh_us_pad, self.db2_hpf, self.db2_lpf, self.pad_type)
-        hl_conv_hpf_lpf_tr = conv_tr_conv_tr(hl_us_pad, self.db2_lpf, self.db2_hpf, self.pad_type)
-        hh_conv_hpf_hpf_tr = conv_tr_conv_tr(hh_us_pad, self.db2_hpf, self.db2_hpf, self.pad_type)
+        ll_conv_lpf_lpf_tr = conv_tr_conv_tr(ll_us_pad, self.rec_lpf, self.rec_lpf, self.pad_type)
+        lh_conv_lpf_hpf_tr = conv_tr_conv_tr(lh_us_pad, self.rec_hpf, self.rec_lpf, self.pad_type)
+        hl_conv_hpf_lpf_tr = conv_tr_conv_tr(hl_us_pad, self.rec_lpf, self.rec_hpf, self.pad_type)
+        hh_conv_hpf_hpf_tr = conv_tr_conv_tr(hh_us_pad, self.rec_hpf, self.rec_hpf, self.pad_type)
 
         # add all together
         reconstructed = tf.math.add_n([ll_conv_lpf_lpf_tr, lh_conv_lpf_hpf_tr,
@@ -196,6 +196,86 @@ class IDWT(layers.Layer):
         # crop the paded part
         crop = (self.rec_len - 1)*2
         return reconstructed[:, crop-1:-crop, crop-1:-crop, :]
+
+
+class DWT1D(layers.Layer):
+    """
+    1D Discrete Wavelet Transform - TensorFlow - Keras
+    """
+
+    def __init__(self, wavelet_name='haar', **kwargs):
+        super(DWT1D, self).__init__(**kwargs)
+        wavelet = pywt.Wavelet(wavelet_name)
+        self.wavelet_name = wavelet_name
+        self.dec_len = wavelet.dec_len
+
+        # decomposition filters (reverse order)
+        dec_lpf = wavelet.dec_lo[::-1]
+        dec_hpf = wavelet.dec_hi[::-1]
+
+        # Convert filters to tensors
+        self.dec_lpf = tf.reshape(tf.constant(dec_lpf, dtype=tf.float32), (wavelet.dec_len, 1, 1))
+        self.dec_hpf = tf.reshape(tf.constant(dec_hpf, dtype=tf.float32), (wavelet.dec_len, 1, 1))
+        self.border_padd = "SYMMETRIC"
+
+    def call(self, inputs, training=None, mask=None):
+        inputs_pad = tf.pad(inputs, [[0, 0], [self.dec_len-1, self.dec_len-1], [0, 0]], self.border_padd)
+
+        # Convolution for approximation and detail coefficients
+        a = tf.nn.conv1d(inputs_pad, self.dec_lpf, stride=1, padding='VALID')
+        d = tf.nn.conv1d(inputs_pad, self.dec_hpf, stride=1, padding='VALID')
+
+        # Downsampling
+        a_ds = a[:, 1:a.shape[1]:2, :]
+        d_ds = d[:, 1:a.shape[1]:2, :]
+
+        return tf.concat([a_ds, d_ds], axis=-1)
+
+
+class IDWT1D(layers.Layer):
+    """
+    1D Inverse Discrete Wavelet Transform - TensorFlow - Keras
+    """
+
+    def __init__(self, wavelet_name='haar', **kwargs):
+        super(IDWT1D, self).__init__(**kwargs)
+        wavelet = pywt.Wavelet(wavelet_name)
+        self.wavelet_name = wavelet_name
+        self.rec_len = wavelet.rec_len
+
+        # Reconstruction filters
+        rec_lpf = wavelet.rec_lo[::-1]  # Low-pass reconstruction filter
+        rec_hpf = wavelet.rec_hi[::-1]  # High-pass reconstruction filter
+
+        # Convert filters to tensors
+        self.rec_lpf = tf.reshape(tf.constant(rec_lpf, dtype=tf.float32), (wavelet.rec_len, 1, 1))
+        self.rec_hpf = tf.reshape(tf.constant(rec_hpf, dtype=tf.float32), (wavelet.rec_len, 1, 1))
+        
+        self.border_padd = "REFLECT"
+
+    def call(self, inputs, training=None, mask=None):
+        # Split approximation and detail coefficients
+        a_ds, d_ds = tf.split(inputs, num_or_size_splits=2, axis=-1)
+
+        # Upsample (interleave with zeros)
+        batch_size, length, channels = tf.shape(a_ds)[0], tf.shape(a_ds)[1], tf.shape(a_ds)[2]
+        
+        upsampled_shape = (batch_size, length * 2 , channels)
+        a_upsampled = tf.reshape(tf.stack([a_ds, tf.zeros_like(a_ds)], axis=2), upsampled_shape)
+        d_upsampled = tf.reshape(tf.stack([d_ds, tf.zeros_like(d_ds)], axis=2), upsampled_shape)
+
+        pad_size = self.rec_len - 1
+        
+        a_upsampled_pad = tf.pad(a_upsampled, [[0, 0], [pad_size, pad_size], [0, 0]], self.border_padd)
+        d_upsampled_pad = tf.pad(d_upsampled, [[0, 0], [pad_size, pad_size], [0, 0]], self.border_padd)
+        
+        # Convolve with reconstruction filters
+        a_rec = tf.nn.conv1d(a_upsampled_pad, self.rec_lpf, stride=1, padding='VALID')
+        d_rec = tf.nn.conv1d(d_upsampled_pad, self.rec_hpf, stride=1, padding='VALID')
+
+        # Reconstruct original signal
+        reconstructed = a_rec[:, pad_size-1:-pad_size, :] + d_rec[:, pad_size-1:-pad_size, :]
+        return reconstructed
 
 
 if __name__ == "__main__":
