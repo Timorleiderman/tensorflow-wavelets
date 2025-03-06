@@ -216,22 +216,18 @@ class DWT1D(layers.Layer):
         # Convert filters to tensors
         self.dec_lpf = tf.reshape(tf.constant(dec_lpf, dtype=tf.float32), (wavelet.dec_len, 1, 1))
         self.dec_hpf = tf.reshape(tf.constant(dec_hpf, dtype=tf.float32), (wavelet.dec_len, 1, 1))
+        self.border_padd = "SYMMETRIC"
 
     def call(self, inputs, training=None, mask=None):
-        inputs_pad = tf.pad(inputs, [[0, 0], [self.dec_len-1, self.dec_len-1], [0, 0]], "SYMMETRIC")
+        inputs_pad = tf.pad(inputs, [[0, 0], [self.dec_len-1, self.dec_len-1], [0, 0]], self.border_padd)
 
         # Convolution for approximation and detail coefficients
         a = tf.nn.conv1d(inputs_pad, self.dec_lpf, stride=1, padding='VALID')
         d = tf.nn.conv1d(inputs_pad, self.dec_hpf, stride=1, padding='VALID')
 
-        # Ensure even length by trimming if needed
-        new_length = tf.shape(a)[1] // 2 * 2  # Ensure it's even
-        a = a[:, :new_length, :]
-        d = d[:, :new_length, :]
-
         # Downsampling
-        a_ds = a[:, ::2, :]
-        d_ds = d[:, ::2, :]
+        a_ds = a[:, 1:a.shape[1]:2, :]
+        d_ds = d[:, 1:a.shape[1]:2, :]
 
         return tf.concat([a_ds, d_ds], axis=-1)
 
@@ -248,32 +244,38 @@ class IDWT1D(layers.Layer):
         self.rec_len = wavelet.rec_len
 
         # Reconstruction filters
-        rec_lpf = wavelet.rec_lo[::-1]
-        rec_hpf = wavelet.rec_hi[::-1]
+        rec_lpf = wavelet.rec_lo[::-1]  # Low-pass reconstruction filter
+        rec_hpf = wavelet.rec_hi[::-1]  # High-pass reconstruction filter
 
         # Convert filters to tensors
         self.rec_lpf = tf.reshape(tf.constant(rec_lpf, dtype=tf.float32), (wavelet.rec_len, 1, 1))
         self.rec_hpf = tf.reshape(tf.constant(rec_hpf, dtype=tf.float32), (wavelet.rec_len, 1, 1))
+        
+        self.border_padd = "REFLECT"
 
     def call(self, inputs, training=None, mask=None):
-        # Split input into approximation and detail coefficients
-        a_ds, d_ds = tf.split(inputs, 2, axis=-1)
+        # Split approximation and detail coefficients
+        a_ds, d_ds = tf.split(inputs, num_or_size_splits=2, axis=-1)
 
-        # Upsample by inserting zeros
+        # Upsample (interleave with zeros)
         batch_size, length, channels = tf.shape(a_ds)[0], tf.shape(a_ds)[1], tf.shape(a_ds)[2]
-        upsampled_length = length * 2
+        
+        upsampled_shape = (batch_size, length * 2 , channels)
+        a_upsampled = tf.reshape(tf.stack([a_ds, tf.zeros_like(a_ds)], axis=2), upsampled_shape)
+        d_upsampled = tf.reshape(tf.stack([d_ds, tf.zeros_like(d_ds)], axis=2), upsampled_shape)
 
-        # Insert zeros between upsampled values
-        a_upsampled = tf.reshape(tf.stack([a_ds, tf.zeros_like(a_ds)], axis=2), (batch_size, upsampled_length, channels))
-        d_upsampled = tf.reshape(tf.stack([d_ds, tf.zeros_like(d_ds)], axis=2), (batch_size, upsampled_length, channels))
+        pad_size = self.rec_len - 1
+        
+        a_upsampled_pad = tf.pad(a_upsampled, [[0, 0], [pad_size, pad_size], [0, 0]], self.border_padd)
+        d_upsampled_pad = tf.pad(d_upsampled, [[0, 0], [pad_size, pad_size], [0, 0]], self.border_padd)
+        
+        # Convolve with reconstruction filters
+        a_rec = tf.nn.conv1d(a_upsampled_pad, self.rec_lpf, stride=1, padding='VALID')
+        d_rec = tf.nn.conv1d(d_upsampled_pad, self.rec_hpf, stride=1, padding='VALID')
 
-        # Apply reconstruction filters using 1D convolution
-        a_rec = tf.nn.conv1d(a_upsampled, self.rec_lpf, stride=1, padding='SAME')
-        d_rec = tf.nn.conv1d(d_upsampled, self.rec_hpf, stride=1, padding='SAME')
-
-        # Reconstruct signal by summing contributions
-        return a_rec + d_rec
-
+        # Reconstruct original signal
+        reconstructed = a_rec[:, pad_size-1:-pad_size, :] + d_rec[:, pad_size-1:-pad_size, :]
+        return reconstructed
 
 
 if __name__ == "__main__":
