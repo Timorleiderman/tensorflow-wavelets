@@ -4,8 +4,7 @@ import logging
 import numpy as np
 import tensorflow as tf
 
-
-from tensorflow_wavelets.Layers.DWT import DWT1D, IDWT1D  # Replace 'your_module' with the actual module name
+from tensorflow_wavelets.Layers.DWT import DWT1D, IDWT1D
 
 logger = logging.getLogger(__file__)
 
