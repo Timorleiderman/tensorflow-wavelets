@@ -213,23 +213,32 @@ class DWT1D(layers.Layer):
         dec_lpf = wavelet.dec_lo[::-1]
         dec_hpf = wavelet.dec_hi[::-1]
 
-        # Convert filters to tensors
-        self.dec_lpf = tf.reshape(tf.constant(dec_lpf, dtype=tf.float32), (wavelet.dec_len, 1, 1))
-        self.dec_hpf = tf.reshape(tf.constant(dec_hpf, dtype=tf.float32), (wavelet.dec_len, 1, 1))
+        # Convert filters to tensors (batch, in_channels, out_channels)
+        self.dec_lpf = tf.constant(dec_lpf, dtype=tf.float32)[:, tf.newaxis, tf.newaxis]
+        self.dec_hpf = tf.constant(dec_hpf, dtype=tf.float32)[:, tf.newaxis, tf.newaxis]
+        
         self.border_padd = "SYMMETRIC"
+        self.border_type = "VALID"
 
     def call(self, inputs, training=None, mask=None):
+        batch_size, length, channels = tf.unstack(tf.shape(inputs))
+
+        # Pad input symmetrically
         inputs_pad = tf.pad(inputs, [[0, 0], [self.dec_len-1, self.dec_len-1], [0, 0]], self.border_padd)
 
-        # Convolution for approximation and detail coefficients
-        a = tf.nn.conv1d(inputs_pad, self.dec_lpf, stride=1, padding='VALID')
-        d = tf.nn.conv1d(inputs_pad, self.dec_hpf, stride=1, padding='VALID')
+        # Expand filters to support multiple channels (dec_len, 1, channels)
+        dec_lpf = tf.tile(self.dec_lpf, [1, 1, channels])  # Repeat for all channels
+        dec_hpf = tf.tile(self.dec_hpf, [1, 1, channels])  # Repeat for all channels
+
+        # Apply convolution independently per channel
+        a = tf.nn.conv1d(inputs_pad, dec_lpf, stride=1, padding=self.border_type)
+        d = tf.nn.conv1d(inputs_pad, dec_hpf, stride=1, padding=self.border_type)
 
         # Downsampling
         a_ds = a[:, 1:a.shape[1]:2, :]
-        d_ds = d[:, 1:a.shape[1]:2, :]
+        d_ds = d[:, 1:d.shape[1]:2, :]
 
-        return tf.concat([a_ds, d_ds], axis=-1)
+        return tf.concat([a_ds, d_ds], axis=-1)  # Concatenate along channel dimension
 
 
 class IDWT1D(layers.Layer):
@@ -241,40 +250,48 @@ class IDWT1D(layers.Layer):
         super(IDWT1D, self).__init__(**kwargs)
         wavelet = pywt.Wavelet(wavelet_name)
         self.wavelet_name = wavelet_name
-        self.rec_len = wavelet.rec_len
+        self.rec_len = wavelet.rec_len  # Reconstruction filter length
 
         # Reconstruction filters
         rec_lpf = wavelet.rec_lo[::-1]  # Low-pass reconstruction filter
         rec_hpf = wavelet.rec_hi[::-1]  # High-pass reconstruction filter
 
         # Convert filters to tensors
-        self.rec_lpf = tf.reshape(tf.constant(rec_lpf, dtype=tf.float32), (wavelet.rec_len, 1, 1))
-        self.rec_hpf = tf.reshape(tf.constant(rec_hpf, dtype=tf.float32), (wavelet.rec_len, 1, 1))
+        self.rec_lpf = tf.constant(rec_lpf, dtype=tf.float32)[:, tf.newaxis, tf.newaxis]
+        self.rec_hpf = tf.constant(rec_hpf, dtype=tf.float32)[:, tf.newaxis, tf.newaxis]
         
         self.border_padd = "REFLECT"
+        self.border_type = "VALID"
 
     def call(self, inputs, training=None, mask=None):
         # Split approximation and detail coefficients
         a_ds, d_ds = tf.split(inputs, num_or_size_splits=2, axis=-1)
 
-        # Upsample (interleave with zeros)
-        batch_size, length, channels = tf.shape(a_ds)[0], tf.shape(a_ds)[1], tf.shape(a_ds)[2]
-        
-        upsampled_shape = (batch_size, length * 2 , channels)
-        a_upsampled = tf.reshape(tf.stack([a_ds, tf.zeros_like(a_ds)], axis=2), upsampled_shape)
-        d_upsampled = tf.reshape(tf.stack([d_ds, tf.zeros_like(d_ds)], axis=2), upsampled_shape)
+        batch_size, length, channels = tf.unstack(tf.shape(a_ds))
 
+        # Upsample (interleave with zeros)
+        upsampled_length = length * 2
+        a_upsampled = tf.reshape(tf.stack([a_ds, tf.zeros_like(a_ds)], axis=2), (batch_size, upsampled_length, channels))
+        d_upsampled = tf.reshape(tf.stack([d_ds, tf.zeros_like(d_ds)], axis=2), (batch_size, upsampled_length, channels))
+
+        # Compute padding size dynamically
         pad_size = self.rec_len - 1
-        
+
+        # Apply padding before convolution
         a_upsampled_pad = tf.pad(a_upsampled, [[0, 0], [pad_size, pad_size], [0, 0]], self.border_padd)
         d_upsampled_pad = tf.pad(d_upsampled, [[0, 0], [pad_size, pad_size], [0, 0]], self.border_padd)
-        
-        # Convolve with reconstruction filters
-        a_rec = tf.nn.conv1d(a_upsampled_pad, self.rec_lpf, stride=1, padding='VALID')
-        d_rec = tf.nn.conv1d(d_upsampled_pad, self.rec_hpf, stride=1, padding='VALID')
 
-        # Reconstruct original signal
+        # Expand filters to match the number of channels
+        rec_lpf = tf.tile(self.rec_lpf, [1, 1, channels])
+        rec_hpf = tf.tile(self.rec_hpf, [1, 1, channels])
+
+        # Convolve with reconstruction filters
+        a_rec = tf.nn.conv1d(a_upsampled_pad, rec_lpf, stride=1, padding=self.border_type)
+        d_rec = tf.nn.conv1d(d_upsampled_pad, rec_hpf, stride=1, padding=self.border_type)
+
+        # Add the reconstructed signals
         reconstructed = a_rec[:, pad_size-1:-pad_size, :] + d_rec[:, pad_size-1:-pad_size, :]
+
         return reconstructed
 
 
