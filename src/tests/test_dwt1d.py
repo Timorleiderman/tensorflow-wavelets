@@ -8,7 +8,8 @@ from tensorflow_wavelets.Layers.DWT import DWT1D, IDWT1D
 
 logger = logging.getLogger(__file__)
 
-def create_sig(channel_count: int):
+def create_signal(channel_count: int):
+    # Create a simple 1D signal
     num_samples = random.randint(8, 128) * 2
     x = np.linspace(0, 2 * np.pi, num_samples)
     signal = np.sin(random.randint(1, 1e5) * x).astype(np.float32)  
@@ -17,11 +18,9 @@ def create_sig(channel_count: int):
 
 @pytest.mark.parametrize("wavelet_name", ["haar", "db2", "coif1"])
 def test_wavelet_transform(wavelet_name):
-    # Create a simple 1D signal
     
-    for i in range(1, 8):
-        signal = create_sig(i)
-
+    for idx in range(1, 8):
+        signal = create_signal(idx)
         logger.info(f"{signal.shape}")
         # Create Wavelet Transform layers
         dwt = DWT1D(wavelet_name)
